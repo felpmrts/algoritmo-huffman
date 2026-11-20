@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Relatório — Compressão com Algoritmo de Huffman (FACOM32402)</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 15mm 16mm 15mm 16mm;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Liberation Serif", "Times New Roman", Georgia, serif;
+      font-size: 10.2pt;
+      line-height: 1.38;
+      color: #1a1a1a;
+      margin: 0;
+      padding: 0;
+      background: #fff;
+    }
+
+    .pagina {
+      page-break-after: always;
+      position: relative;
+    }
+
+    .pagina:last-child {
+      page-break-after: auto;
+    }
+
+    .cabecalho-academico {
+      text-align: center;
+      border-bottom: 1.5px solid #222;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+
+    .cabecalho-academico .instituicao {
+      font-size: 11.5pt;
+      font-weight: bold;
+    }
+
+    .cabecalho-academico .disciplina {
+      font-size: 10pt;
+      margin-top: 2px;
+    }
+
+    .cabecalho-academico h1 {
+      font-size: 13.5pt;
+      margin: 8px 0 2px 0;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 11.3pt;
+      color: #111;
+      border-bottom: 0.8px solid #bbb;
+      padding-bottom: 2px;
+      margin: 11px 0 6px 0;
+    }
+
+    h3 {
+      font-size: 10.4pt;
+      color: #222;
+      margin: 8px 0 4px 0;
+    }
+
+    p {
+      text-align: justify;
+      margin: 0 0 6px 0;
+    }
+
+    ul, ol {
+      margin: 4px 0 7px 0;
+      padding-left: 18px;
+    }
+
+    li {
+      text-align: justify;
+      margin-bottom: 3px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 6px 0 8px 0;
+      font-size: 9pt;
+    }
+
+    th, td {
+      border: 1px solid #999;
+      padding: 4px 5px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background-color: #f0f2f5;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    td.num {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    td.centro {
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    code {
+      font-family: "Liberation Mono", "Courier New", monospace;
+      font-size: 8.8pt;
+      background-color: #f4f4f4;
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+
+    a {
+      color: #0b5394;
+      text-decoration: underline;
+      word-break: break-all;
+    }
+
+    .caixa-destaque {
+      background-color: #f8f9fa;
+      border-left: 3px solid #333;
+      padding: 6px 9px;
+      margin: 6px 0 8px 0;
+      font-size: 9.6pt;
+    }
+
+    .referencia {
+      margin-bottom: 6px;
+      font-size: 9.4pt;
+      text-align: justify;
+    }
+
+    @media screen {
+      body {
+        background: #e5e7eb;
+        padding: 20px 0;
+      }
+      .pagina {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 0 auto 20px auto;
+        padding: 15mm 16mm;
+        background: #fff;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============================ PAGINA 1 ============================ -->
+  <section class="pagina">
+    <div class="cabecalho-academico">
+      <div class="instituicao">Universidade Federal de Uberlândia — Faculdade de Computação (FACOM)</div>
+      <div class="disciplina">FACOM32402 – Estrutura de Dados II | 2026/2 | Prof. Renato Pimentel</div>
+      <h1>Trabalho: Compressão de Textos com o Algoritmo de Huffman</h1>
+    </div>
+
+    <h2>1. Integrantes do Grupo e Papéis Desempenhados</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 25%;">Integrante</th>
+          <th style="width: 15%;">Matrícula</th>
+          <th style="width: 60%;">Papel Desempenhado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>[Nome do Integrante 1]</td>
+          <td class="centro">[Matrícula 1]</td>
+          <td>Pesquisa teórica do algoritmo de Huffman, definição da arquitetura modular em TADs opacos e revisão técnica do relatório.</td>
+        </tr>
+        <tr>
+          <td>[Nome do Integrante 2]</td>
+          <td class="centro">[Matrícula 2]</td>
+          <td>Projeto e implementação do TAD opaco <code>ArvoreHuffman</code> (<code>ArvoreHuffman.h/.c</code>), baseado na árvore binária vista em aula.</td>
+        </tr>
+        <tr>
+          <td>[Nome do Integrante 3]</td>
+          <td class="centro">[Matrícula 3]</td>
+          <td>Projeto e implementação do TAD opaco <code>FilaPrioridade</code> (<code>FilaPrioridade.h/.c</code>) utilizando <em>min-heap</em> binário em vetor.</td>
+        </tr>
+        <tr>
+          <td>[Nome do Integrante 4]</td>
+          <td class="centro">[Matrícula 4]</td>
+          <td>Implementação do módulo <code>Huffman</code> (<code>Huffman.h/.c</code>): frequências, tabela de códigos, cabeçalho e leitura/escrita bit a bit.</td>
+        </tr>
+        <tr>
+          <td>[Nome do Integrante 5]</td>
+          <td class="centro">[Matrícula 5]</td>
+          <td>Desenvolvimento de <code>main.c</code>, elaboração dos arquivos de teste em <code>dados/</code>, validação no Valgrind e análise dos resultados.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>2. O Algoritmo de Huffman e sua Lógica de Funcionamento</h2>
+    <p>
+      O algoritmo de Huffman, desenvolvido por David A. Huffman em 1952, é um método clássico de
+      <strong>compressão de dados sem perdas</strong> (<em>lossless</em>) fundamentado na estratégia
+      <strong>gulosa</strong> (<em>greedy</em>). Em arquivos de texto comuns, cada caractere (byte) é armazenado
+      com comprimento fixo de <strong>8 bits</strong>, independentemente de ocorrer milhares de vezes (como espaços
+      e vogais) ou raramente (como símbolos pouco usuais).
+    </p>
+    <p>
+      A proposta de Huffman consiste em substituir a codificação fixa por <strong>códigos binários de comprimento
+      variável</strong>: símbolos mais frequentes recebem sequências curtas de bits, enquanto símbolos menos
+      frequentes recebem sequências maiores. Para garantir decodificação unívoca sem delimitadores entre caracteres,
+      o algoritmo gera <strong>códigos livres de prefixo</strong> (<em>prefix-free</em>), nos quais nenhum código
+      válido é prefixo inicial de outro. Estruturalmente, isso equivale a armazenar todos os símbolos exclusivamente
+      nos <strong>nós folha</strong> de uma árvore binária completa.
+    </p>
+
+    <h3>Etapas do Algoritmo</h3>
+    <ol>
+      <li><strong>Contagem de frequências:</strong> percorre-se o arquivo de entrada contabilizando o número de ocorrências de cada possível valor de byte (0 a 255).</li>
+      <li><strong>Inicialização da fila de prioridade mínima:</strong> para cada símbolo com frequência maior que zero, cria-se um nó folha contendo <code>(simbolo, frequencia)</code> e insere-se o nó em um <em>min-heap</em>.</li>
+      <li><strong>Construção gulosa da Árvore de Huffman:</strong> enquanto houver mais de um nó na fila, removem-se os dois nós de menor frequência, cria-se um nó interno pai cuja frequência é a soma das frequências dos filhos e reinsere-se esse pai na fila. O último nó restante é a raiz da árvore.</li>
+      <li><strong>Geração da tabela de códigos:</strong> realiza-se um percurso em profundidade a partir da raiz, acrescentando <code>'0'</code> ao descer à esquerda e <code>'1'</code> ao descer à direita. Ao atingir uma folha, o caminho acumulado forma o código binário definitivo daquele símbolo.</li>
+      <li><strong>Compactação e descompactação:</strong> na compactação, cada byte original é substituído por seu código e empacotado em bytes de 8 bits. Na descompactação, lê-se o fluxo bit a bit caminhando da raiz até as folhas (<code>0</code> à esquerda, <code>1</code> à direita) até recuperar exatamente o total original de caracteres.</li>
+    </ol>
+
+    <div class="caixa-destaque">
+      <strong>Por que não utilizar Árvore AVL?</strong> Árvores AVL aplicam rotações para manter a altura balanceada.
+      No algoritmo de Huffman, o desbalanceamento é desejável e essencial: símbolos frequentes devem permanecer próximos
+      à raiz (códigos curtos de 2 a 4 bits), enquanto símbolos raros ficam em níveis profundos. Balancear a árvore
+      anularia a otimização do comprimento médio dos códigos.
+    </div>
+  </section>
+
+  <!-- ============================ PAGINA 2 ============================ -->
+  <section class="pagina">
+    <h2>3. Detalhes da Implementação em Linguagem C</h2>
+    <p>
+      O programa foi desenvolvido em C padrão (<code>C99</code>), compilado sem avisos sob as flags
+      <code>-Wall -Wextra -std=c99</code> e organizado em quatro módulos com responsabilidades claras e
+      isoladas. Seguindo o modelo de <code>ArvoreBinaria</code> apresentado na disciplina, todos os dados internos
+      são protegidos por <strong>Tipos Abstratos de Dados (TADs) opacos</strong>: nenhuma definição de
+      <code>struct</code> é exposta nos arquivos de cabeçalho (<code>.h</code>), restringindo o acesso às funções
+      públicas de cada módulo.
+    </p>
+
+    <h3>3.1 Arquitetura Modular e TADs Opacos</h3>
+    <ul>
+      <li>
+        <strong><code>ArvoreHuffman.h</code> / <code>ArvoreHuffman.c</code>:</strong> declara apenas os tipos
+        incompletos <code>NoHuffman</code> e <code>ArvoreHuffman</code>. Oferece funções para criar nós folha e nós
+        internos, consultar símbolo, frequência e filhos, calcular altura, contar o total de nós, imprimir a árvore
+        em pré-ordem e liberar toda a memória em pós-ordem.
+      </li>
+      <li>
+        <strong><code>FilaPrioridade.h</code> / <code>FilaPrioridade.c</code>:</strong> encapsula o TAD opaco
+        <code>FilaPrioridade</code>, implementado sobre um <em>min-heap</em> binário em vetor com as rotinas internas
+        <code>subir_heap</code> e <code>descer_heap</code>. As operações de inserção e remoção do mínimo executam em
+        tempo <em>O(log k)</em>, com <em>k &le; 256</em>, garantindo eficiência na construção da árvore.
+      </li>
+      <li>
+        <strong><code>Huffman.h</code> / <code>Huffman.c</code>:</strong> concentra a lógica completa do compressor
+        e descompressor no TAD opaco <code>Huffman</code>, encapsulando tabela de frequências, árvore, tabela de
+        códigos e métricas estatísticas. Expõe funções de compactação, descompactação, comparação byte a byte
+        (<code>comparar_arquivos</code>) e consulta de estatísticas.
+      </li>
+      <li>
+        <strong><code>main.c</code>:</strong> implementa um menu interativo didático e opções de linha de comando
+        (<code>-c</code>, <code>-d</code>, <code>-t</code>, <code>-b</code>, <code>-e</code>), consumindo
+        exclusivamente a interface pública de <code>Huffman.h</code>.
+      </li>
+    </ul>
+
+    <h3>3.2 Formato do Cabeçalho e Empacotamento em Nível de Bits</h3>
+    <p>
+      Para que o arquivo compactado (<code>.huff</code>) possa ser descompactado de forma independente, o cabeçalho
+      armazena todas as informações necessárias para reconstruir a árvore de Huffman:
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 28%;">Campo do Cabeçalho</th>
+          <th style="width: 22%;">Tipo / Tamanho</th>
+          <th style="width: 50%;">Finalidade</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Assinatura mágica</td>
+          <td class="centro"><code>"HUF1"</code> (4 bytes)</td>
+          <td>Identifica e valida que o arquivo foi gerado pelo compressor.</td>
+        </tr>
+        <tr>
+          <td>Total original</td>
+          <td class="centro"><code>uint64_t</code> (8 bytes)</td>
+          <td>Informa a quantidade exata de bytes a decodificar, ignorando o <em>padding</em> final.</td>
+        </tr>
+        <tr>
+          <td>Símbolos distintos (<em>k</em>)</td>
+          <td class="centro"><code>uint16_t</code> (2 bytes)</td>
+          <td>Indica quantas entradas (0 a 256) compõem a tabela de frequências.</td>
+        </tr>
+        <tr>
+          <td>Tabela de frequências</td>
+          <td class="centro"><em>k</em> &times; (1 + 4 bytes)</td>
+          <td>Pares <code>(uint8_t simbolo, uint32_t frequencia)</code> em ordem crescente (0..255).</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      Logo após o cabeçalho (de tamanho <strong>14 + 5k bytes</strong>), os códigos binários são empacotados em um
+      byte acumulador (<code>byte_atual = (byte_atual &lt;&lt; 1) | bit</code>). Ao completar 8 bits, o byte é gravado
+      em disco. Se restarem bits incompletos ao final do arquivo, realiza-se deslocamento à esquerda com preenchimento
+      por zeros (<em>padding</em>). Na descompactação, os bits são lidos do mais significativo (bit 7) ao menos
+      significativo (bit 0), encerrando imediatamente quando o contador atinge o total original de caracteres.
+    </p>
+
+    <h3>3.3 Tratamento de Lacunas, Determinismo e Gerenciamento de Memória</h3>
+    <ul>
+      <li><strong>Arquivo vazio (0 bytes):</strong> grava cabeçalho válido com <code>total_original = 0</code> e <em>k</em> = 0, restaurando um arquivo vazio sem falhas.</li>
+      <li><strong>Arquivo com um único símbolo distinto (ex.: <code>"AAA..."</code>):</strong> como a raiz já é folha, atribui-se explicitamente o código <code>"0"</code> (1 bit) e trata-se esse caso tanto na codificação quanto na decodificação.</li>
+      <li><strong>Determinismo na reconstrução:</strong> como os símbolos são sempre inseridos na fila de prioridade em ordem crescente (0..255), a árvore reconstruída na descompactação é idêntica à gerada na compactação.</li>
+      <li><strong>Integridade e memória:</strong> a abertura em modo binário (<code>"rb"</code>/<code>"wb"</code>) preserva integralmente acentos UTF-8 e quebras de linha em qualquer sistema. A auditoria via <strong>Valgrind</strong> confirmou <strong>0 erros e 0 bytes vazados</strong> em todas as execuções.</li>
+    </ul>
+  </section>
+
+  <!-- ============================ PAGINA 3 ============================ -->
+  <section class="pagina">
+    <h2>4. Testes Experimentais e Discussão dos Resultados</h2>
+    <p>
+      Foram avaliados cinco arquivos de texto simples em língua portuguesa distribuídos na pasta <code>dados/</code>,
+      abrangendo escalas de alguns kilobytes (~2 KB), dezenas de kilobytes (~15 KB e ~50 KB) e centenas de kilobytes
+      (~200 KB e ~500 KB). Para cada amostra, o programa compactou o texto, descompactou o arquivo resultante e
+      executou verificação byte a byte contra o original.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Arquivo (<code>dados/</code>)</th>
+          <th>Original</th>
+          <th><em>k</em></th>
+          <th>Nós</th>
+          <th>Cabeç.</th>
+          <th>Dados</th>
+          <th>Compactado</th>
+          <th>Bits/S</th>
+          <th>Red. Real</th>
+          <th>Red. Dados</th>
+          <th>Int.</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>texto_pequeno_2kb.txt</code></td>
+          <td class="num">2.414 B</td>
+          <td class="centro">58</td>
+          <td class="centro">115</td>
+          <td class="num">304 B</td>
+          <td class="num">1.326 B</td>
+          <td class="num">1.630 B</td>
+          <td class="centro">4,39</td>
+          <td class="num"><strong>32,48%</strong></td>
+          <td class="num">45,07%</td>
+          <td class="centro">OK</td>
+        </tr>
+        <tr>
+          <td><code>texto_medio_15kb.txt</code></td>
+          <td class="num">14.927 B</td>
+          <td class="centro">69</td>
+          <td class="centro">137</td>
+          <td class="num">359 B</td>
+          <td class="num">8.213 B</td>
+          <td class="num">8.572 B</td>
+          <td class="centro">4,40</td>
+          <td class="num"><strong>42,57%</strong></td>
+          <td class="num">44,98%</td>
+          <td class="centro">OK</td>
+        </tr>
+        <tr>
+          <td><code>texto_medio_50kb.txt</code></td>
+          <td class="num">51.118 B</td>
+          <td class="centro">69</td>
+          <td class="centro">137</td>
+          <td class="num">359 B</td>
+          <td class="num">28.168 B</td>
+          <td class="num">28.527 B</td>
+          <td class="centro">4,41</td>
+          <td class="num"><strong>44,19%</strong></td>
+          <td class="num">44,90%</td>
+          <td class="centro">OK</td>
+        </tr>
+        <tr>
+          <td><code>texto_grande_200kb.txt</code></td>
+          <td class="num">204.523 B</td>
+          <td class="centro">69</td>
+          <td class="centro">137</td>
+          <td class="num">359 B</td>
+          <td class="num">112.977 B</td>
+          <td class="num">113.336 B</td>
+          <td class="centro">4,42</td>
+          <td class="num"><strong>44,59%</strong></td>
+          <td class="num">44,76%</td>
+          <td class="centro">OK</td>
+        </tr>
+        <tr>
+          <td><code>texto_grande_500kb.txt</code></td>
+          <td class="num">511.711 B</td>
+          <td class="centro">69</td>
+          <td class="centro">137</td>
+          <td class="num">359 B</td>
+          <td class="num">283.272 B</td>
+          <td class="num">283.631 B</td>
+          <td class="centro">4,43</td>
+          <td class="num"><strong>44,57%</strong></td>
+          <td class="num">44,64%</td>
+          <td class="centro">OK</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Discussão dos Resultados Observados</h3>
+    <ul>
+      <li>
+        <strong>Efeito do cabeçalho em arquivos pequenos:</strong> na amostra de 2,36 KB, os dados codificados
+        alcançaram <strong>45,07%</strong> de redução, porém o ganho real líquido caiu para <strong>32,48%</strong>.
+        Isso acontece porque o cabeçalho de 304 bytes representa <strong>12,59%</strong> do arquivo original,
+        evidenciando a sobrecarga fixa necessária para armazenar a tabela de frequências.
+      </li>
+      <li>
+        <strong>Convergência com o aumento do volume de texto:</strong> nos arquivos de 15 KB a 500 KB, o alfabeto
+        estabilizou em <em>k</em> = 69 símbolos distintos e o cabeçalho manteve-se fixo em <strong>359 bytes</strong>.
+        Sua fração relativa reduziu de 2,41% (15 KB) para apenas <strong>0,07%</strong> (500 KB), fazendo a redução
+        real convergir suavemente até <strong>~44,6%</strong> — praticamente igual à eficiência teórica dos dados puros.
+      </li>
+      <li>
+        <strong>Eficiência estatística e propriedade da árvore:</strong> a representação média caiu de 8,00 bits para
+        <strong>4,39–4,43 bits/símbolo</strong>, refletindo a redundância natural da língua portuguesa. Em todos os
+        casos, verificou-se a identidade estrutural de árvores binárias completas (<em>2k &minus; 1</em> nós: 115 para
+        <em>k</em> = 58 e 137 para <em>k</em> = 69), com 100% de fidelidade na reconstrução byte a byte.
+      </li>
+    </ul>
+
+    <h2>5. Materiais Consultados, Links e Justificativa da Escolha</h2>
+    <div class="referencia">
+      <strong>1. HUFFMAN, D. A. (1952).</strong> <em>A Method for the Construction of Minimum-Redundancy Codes.</em>
+      Proceedings of the IRE, 40(9), 1098–1101.
+      Links: <a href="https://ieeexplore.ieee.org/document/273898">https://ieeexplore.ieee.org/document/273898</a> |
+      PDF público: <a href="https://www.coit.es/foro-historico/sites/default/files/ficheros_adjuntos/a_method_for_the_construction_of_minimum_redundancy_codes.pdf">coit.es/.../minimum_redundancy_codes.pdf</a>.<br>
+      <em>Justificativa:</em> fonte primária original que formaliza o algoritmo e demonstra a otimalidade dos códigos de prefixo.
+    </div>
+    <div class="referencia">
+      <strong>2. FEOFILOFF, P. (IME-USP).</strong> <em>Análise de Algoritmos (Código de Huffman e Filas-com-Prioridades)</em>
+      e <em>Árvores Binárias em C</em>.
+      Links: <a href="https://www.ime.usp.br/~pf/analise_de_algoritmos/">https://www.ime.usp.br/~pf/analise_de_algoritmos/</a> e
+      <a href="https://www.ime.usp.br/~pf/algoritmos/aulas/binst.html">https://www.ime.usp.br/~pf/algoritmos/aulas/binst.html</a>.<br>
+      <em>Justificativa:</em> notas de aula de referência em português (citadas no código-base da disciplina), escolhidas pela clareza didática sobre <em>min-heaps</em> aplicados à construção da árvore de Huffman.
+    </div>
+    <div class="referencia">
+      <strong>3. PIMENTEL, R. (FACOM/UFU).</strong> <em>Código de Referência — Árvore Binária (TAD Opaco em C).</em>
+      Link: <a href="https://onlinegdb.com/eqb9wEDY6">https://onlinegdb.com/eqb9wEDY6</a>.<br>
+      <em>Justificativa:</em> ponto de partida oficial da disciplina FACOM32402 utilizado para alinhar o estilo de encapsulamento do TAD opaco.
+    </div>
+    <div class="referencia">
+      <strong>4. CORMEN, T. H. et al.</strong> <em>Introduction to Algorithms</em> (Cap. 16.3 — Huffman Codes). MIT Press.
+      Link: <a href="https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/">https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/</a>.<br>
+      <em>Justificativa:</em> referência bibliográfica clássica consultada para fundamentar a escolha gulosa e a análise assintótica <em>O(k log k)</em>.
+    </div>
+    <div class="referencia">
+      <strong>5. GEEKSFORGEEKS.</strong> <em>Huffman Coding | Greedy Algo-3.</em>
+      Link: <a href="https://www.geeksforgeeks.org/huffman-coding-greedy-algo-3/">https://www.geeksforgeeks.org/huffman-coding-greedy-algo-3/</a>.<br>
+      <em>Justificativa:</em> material prático complementar escolhido pelos exemplos passo a passo da combinação de nós e atribuição dos bits.
+    </div>
+  </section>
+
+</body>
+</html>

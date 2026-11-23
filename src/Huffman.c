@@ -7,22 +7,15 @@
 #include "ArvoreHuffman.h"
 #include "FilaPrioridade.h"
 
-/* Constantes internas do algoritmo */
 #define TOTAL_SIMBOLOS 256
-#define TAMANHO_MAX_CODIGO 257
 #define ASSINATURA_HUFFMAN "HUF1"
 #define TAMANHO_ASSINATURA 4
 
-/*
- * Definicao interna do TAD opaco Huffman.
- * Nenhum outro arquivo pode acessar diretamente os campos abaixo.
- */
 struct Huffman {
     unsigned long frequencias[TOTAL_SIMBOLOS];
     ArvoreHuffman *arvore;
     char *tabela_codigos[TOTAL_SIMBOLOS];
 
-    /* Estatisticas da ultima operacao realizada */
     unsigned long tamanho_original;
     unsigned long bytes_cabecalho;
     unsigned long bytes_dados_codificados;
@@ -30,12 +23,37 @@ struct Huffman {
     int simbolos_distintos;
 };
 
-/* ============================================================================
- * Funcoes auxiliares internas (privadas ao modulo Huffman.c)
- * ============================================================================
- */
+static double calcular_log2(double x) {
+    const double LN2 = 0.69314718055994530942;
+    int expoente = 0;
 
-/* Libera arvore e tabela de codigos anteriores e zera o estado interno */
+    if (x <= 0.0) {
+        return 0.0;
+    }
+
+    while (x >= 2.0) {
+        x *= 0.5;
+        expoente++;
+    }
+    while (x < 1.0) {
+        x *= 2.0;
+        expoente--;
+    }
+
+    double y = (x - 1.0) / (x + 1.0);
+    double y2 = y * y;
+    double termo = y;
+    double soma = 0.0;
+    int k;
+
+    for (k = 0; k < 15; k++) {
+        soma += termo / (double) (2 * k + 1);
+        termo *= y2;
+    }
+
+    return (double) expoente + (2.0 * soma) / LN2;
+}
+
 static void limpar_estado_huffman(Huffman *huffman) {
     int i;
 
@@ -59,16 +77,9 @@ static void limpar_estado_huffman(Huffman *huffman) {
     huffman->simbolos_distintos = 0;
 }
 
-/*
- * Etapa 1 do algoritmo: percorre o arquivo de entrada contando a frequencia
- * de ocorrencia de cada caractere (byte 0..255).
- *
- * Abrimos em modo binario ("rb") para ler cada byte do arquivo de texto
- * exatamente como esta armazenado, preservando quebras de linha e acentos
- * UTF-8 em qualquer sistema operacional.
- */
+/* Conta a frequencia de cada simbolo (byte 0..255) lendo o texto em modo texto */
 static int contar_frequencias_arquivo(Huffman *huffman, const char *caminho_entrada) {
-    FILE *entrada = fopen(caminho_entrada, "rb");
+    FILE *entrada = fopen(caminho_entrada, "r");
     if (entrada == NULL) {
         return 0;
     }
@@ -90,17 +101,9 @@ static int contar_frequencias_arquivo(Huffman *huffman, const char *caminho_entr
 }
 
 /*
- * Etapa 2 do algoritmo: constroi a Arvore de Huffman usando a Fila de Prioridade.
- *
- * Passos:
- *   1. Cria um no folha para cada simbolo com frequencia > 0 e insere na fila;
- *   2. Enquanto houver mais de um no na fila, remove os dois de menor frequencia,
- *      combina-os em um novo no interno e reinsere o no interno na fila;
- *   3. O unico no restante e a raiz da Arvore de Huffman.
- *
- * Observacao sobre determinismo: como os simbolos sao sempre inseridos em ordem
- * crescente (0..255), a reconstrucao da arvore na descompactacao produz
- * exatamente a mesma arvore gerada na compactacao.
+ * Constroi a Arvore de Huffman inserindo os simbolos presentes na fila de
+ * prioridade em ordem crescente (0..255) e combinando os dois nos de maior
+ * prioridade segundo a comparacao canonica.
  */
 static int construir_arvore_huffman(Huffman *huffman) {
     if (huffman->simbolos_distintos == 0) {
@@ -125,7 +128,6 @@ static int construir_arvore_huffman(Huffman *huffman) {
         }
     }
 
-    /* Combina iterativamente os dois nos de menor frequencia */
     while (tamanho_fila_prioridade(fila) > 1) {
         NoHuffman *menor1 = remover_menor_fila_prioridade(fila);
         NoHuffman *menor2 = remover_menor_fila_prioridade(fila);
@@ -157,83 +159,16 @@ static int construir_arvore_huffman(Huffman *huffman) {
     return 1;
 }
 
-/* Percorre a arvore recursivamente montando o codigo de cada folha ('0' esq, '1' dir) */
-static int gerar_codigos_recursivo(Huffman *huffman,
-                                   const NoHuffman *no,
-                                   char *buffer,
-                                   int profundidade) {
-    if (no == NULL) {
-        return 1;
-    }
-
-    if (no_eh_folha(no)) {
-        buffer[profundidade] = '\0';
-
-        unsigned char simbolo = obter_simbolo_no(no);
-        char *codigo = (char *) malloc((size_t) (profundidade + 1));
-        if (codigo == NULL) {
-            return 0;
-        }
-
-        strcpy(codigo, buffer);
-        huffman->tabela_codigos[simbolo] = codigo;
-        return 1;
-    }
-
-    /* Ramo esquerdo acrescenta o bit '0' */
-    buffer[profundidade] = '0';
-    if (!gerar_codigos_recursivo(huffman, obter_esquerda_no(no), buffer, profundidade + 1)) {
-        return 0;
-    }
-
-    /* Ramo direito acrescenta o bit '1' */
-    buffer[profundidade] = '1';
-    if (!gerar_codigos_recursivo(huffman, obter_direita_no(no), buffer, profundidade + 1)) {
-        return 0;
-    }
-
-    return 1;
-}
-
-/*
- * Etapa 3 do algoritmo: gera a tabela de codigos binarios a partir da arvore.
- *
- * Caso especial tratado: se o arquivo possui apenas 1 simbolo distinto
- * (ex.: "aaaaa"), a raiz ja e uma folha. Nesse caso, atribuimos o codigo "0"
- * para que cada ocorrencia seja representada por 1 bit.
- */
 static int gerar_tabela_codigos(Huffman *huffman) {
-    if (arvore_huffman_esta_vazia(huffman->arvore)) {
-        return 1;
-    }
-
-    const NoHuffman *raiz = obter_raiz_arvore_huffman(huffman->arvore);
-
-    /* Tratamento do caso especial de arquivo com um unico simbolo distinto */
-    if (no_eh_folha(raiz)) {
-        unsigned char simbolo = obter_simbolo_no(raiz);
-        char *codigo = (char *) malloc(2);
-        if (codigo == NULL) {
-            return 0;
-        }
-        codigo[0] = '0';
-        codigo[1] = '\0';
-        huffman->tabela_codigos[simbolo] = codigo;
-        return 1;
-    }
-
-    char buffer[TAMANHO_MAX_CODIGO];
-    return gerar_codigos_recursivo(huffman, raiz, buffer, 0);
+    return gerar_codigos_arvore_huffman(huffman->arvore, huffman->tabela_codigos);
 }
 
 /*
- * Grava o cabecalho do arquivo compactado (.huff):
- *   - Assinatura magica "HUF1"            (4 bytes)
- *   - Total de bytes do texto original    (8 bytes - uint64_t)
- *   - Quantidade de simbolos distintos    (2 bytes - uint16_t)
- *   - Para cada simbolo presente (0..255):
- *       * simbolo                         (1 byte  - uint8_t)
- *       * frequencia                      (4 bytes - uint32_t)
+ * Formato do cabecalho (.huff):
+ *   - Assinatura "HUF1" (4 bytes)
+ *   - Tamanho original em bytes (uint64_t, 8 bytes)
+ *   - Quantidade de simbolos distintos k (uint16_t, 2 bytes)
+ *   - k pares de (uint8_t simbolo, uint32_t frequencia)
  */
 static int escrever_cabecalho(const Huffman *huffman,
                               FILE *saida,
@@ -278,7 +213,6 @@ static int escrever_cabecalho(const Huffman *huffman,
     return 1;
 }
 
-/* Le e valida o cabecalho de um arquivo compactado (.huff) */
 static int ler_cabecalho(Huffman *huffman, FILE *entrada, unsigned long *bytes_lidos) {
     char assinatura[TAMANHO_ASSINATURA];
     uint64_t total_original = 0;
@@ -289,7 +223,7 @@ static int ler_cabecalho(Huffman *huffman, FILE *entrada, unsigned long *bytes_l
         return 0;
     }
     if (memcmp(assinatura, ASSINATURA_HUFFMAN, TAMANHO_ASSINATURA) != 0) {
-        return 0; /* Arquivo nao possui a assinatura esperada */
+        return 0;
     }
     contador += TAMANHO_ASSINATURA;
 
@@ -318,7 +252,7 @@ static int ler_cabecalho(Huffman *huffman, FILE *entrada, unsigned long *bytes_l
             return 0;
         }
         if (freq == 0 || huffman->frequencias[simbolo] != 0) {
-            return 0; /* Frequencia invalida ou simbolo duplicado no cabecalho */
+            return 0;
         }
 
         huffman->frequencias[simbolo] = (unsigned long) freq;
@@ -327,7 +261,7 @@ static int ler_cabecalho(Huffman *huffman, FILE *entrada, unsigned long *bytes_l
     }
 
     if (soma_frequencias != (unsigned long) total_original) {
-        return 0; /* Inconsistencia entre a soma das frequencias e o total original */
+        return 0;
     }
 
     huffman->tamanho_original = (unsigned long) total_original;
@@ -337,10 +271,7 @@ static int ler_cabecalho(Huffman *huffman, FILE *entrada, unsigned long *bytes_l
     return 1;
 }
 
-/*
- * Etapa 4 do algoritmo: reler o arquivo original e gravar os codigos de Huffman
- * empacotados bit a bit em bytes no arquivo de saida.
- */
+/* Codifica o arquivo original empacotando os bits em bytes */
 static int gravar_dados_compactados(const Huffman *huffman,
                                     FILE *entrada,
                                     FILE *saida,
@@ -358,11 +289,9 @@ static int gravar_dados_compactados(const Huffman *huffman,
 
         int i;
         for (i = 0; codigo[i] != '\0'; i++) {
-            /* Desloca os bits ja acumulados para a esquerda e insere o proximo bit */
             byte_atual = (unsigned char) ((byte_atual << 1) | (codigo[i] == '1' ? 1 : 0));
             bits_no_byte++;
 
-            /* Quando completamos 8 bits, gravamos o byte completo no arquivo */
             if (bits_no_byte == 8) {
                 if (fputc(byte_atual, saida) == EOF) {
                     return 0;
@@ -378,11 +307,7 @@ static int gravar_dados_compactados(const Huffman *huffman,
         return 0;
     }
 
-    /*
-     * Se sobraram bits pendentes no ultimo byte (< 8 bits), deslocamos para a
-     * esquerda completando os bits finais com zero (padding). Na descompactacao,
-     * esses bits extras serao ignorados pois sabemos o total exato de caracteres.
-     */
+    /* Preenche com zeros a direita caso o ultimo byte nao tenha completado 8 bits */
     if (bits_no_byte > 0) {
         byte_atual = (unsigned char) (byte_atual << (8 - bits_no_byte));
         if (fputc(byte_atual, saida) == EOF) {
@@ -396,9 +321,8 @@ static int gravar_dados_compactados(const Huffman *huffman,
 }
 
 /*
- * Etapa 5 do algoritmo: le os bits do arquivo compactado e caminha na Arvore
- * de Huffman (0 -> esquerda, 1 -> direita) ate recuperar exatamente todos os
- * caracteres originais.
+ * Decodifica o fluxo de bits percorrendo a Arvore de Huffman da raiz ate as
+ * folhas, validando padding nulo e ausencia de bytes excedentes ao final.
  */
 static int decodificar_dados(const Huffman *huffman,
                              FILE *entrada,
@@ -406,8 +330,10 @@ static int decodificar_dados(const Huffman *huffman,
                              unsigned long *bytes_lidos) {
     *bytes_lidos = 0;
 
-    /* Arquivo original vazio: nada a decodificar */
     if (huffman->tamanho_original == 0) {
+        if (fgetc(entrada) != EOF || ferror(entrada)) {
+            return 0;
+        }
         return 1;
     }
 
@@ -423,13 +349,14 @@ static int decodificar_dados(const Huffman *huffman,
     while (decodificados < huffman->tamanho_original && (byte_lido = fgetc(entrada)) != EOF) {
         (*bytes_lidos)++;
 
-        /* Le os 8 bits do byte do mais significativo (7) ao menos significativo (0) */
         int pos_bit;
         for (pos_bit = 7; pos_bit >= 0 && decodificados < huffman->tamanho_original; pos_bit--) {
             int bit = (byte_lido >> pos_bit) & 1;
 
-            /* Caso especial: arvore com apenas 1 simbolo distinto (raiz e folha) */
             if (no_eh_folha(raiz)) {
+                if (bit != 0) {
+                    return 0;
+                }
                 if (fputc(obter_simbolo_no(raiz), saida) == EOF) {
                     return 0;
                 }
@@ -437,18 +364,11 @@ static int decodificar_dados(const Huffman *huffman,
                 continue;
             }
 
-            /* Caminha na arvore conforme o bit lido */
-            if (bit == 0) {
-                atual = obter_esquerda_no(atual);
-            } else {
-                atual = obter_direita_no(atual);
-            }
-
+            atual = (bit == 0) ? obter_esquerda_no(atual) : obter_direita_no(atual);
             if (atual == NULL) {
-                return 0; /* Caminho invalido (arquivo corrompido) */
+                return 0;
             }
 
-            /* Ao atingir uma folha, recuperamos um simbolo e voltamos para a raiz */
             if (no_eh_folha(atual)) {
                 if (fputc(obter_simbolo_no(atual), saida) == EOF) {
                     return 0;
@@ -457,20 +377,26 @@ static int decodificar_dados(const Huffman *huffman,
                 atual = raiz;
             }
         }
+
+        if (decodificados == huffman->tamanho_original) {
+            for (; pos_bit >= 0; pos_bit--) {
+                if (((byte_lido >> pos_bit) & 1) != 0) {
+                    return 0;
+                }
+            }
+        }
     }
 
-    if (ferror(entrada)) {
+    if (ferror(entrada) || decodificados != huffman->tamanho_original) {
         return 0;
     }
 
-    /* Garante que todos os caracteres originais foram recuperados */
-    return (decodificados == huffman->tamanho_original);
-}
+    if (fgetc(entrada) != EOF || ferror(entrada)) {
+        return 0;
+    }
 
-/* ============================================================================
- * Funcoes publicas do TAD Huffman
- * ============================================================================
- */
+    return 1;
+}
 
 Huffman *criar_huffman(void) {
     Huffman *huffman = (Huffman *) calloc(1, sizeof(Huffman));
@@ -495,23 +421,19 @@ int compactar_arquivo(Huffman *huffman,
 
     limpar_estado_huffman(huffman);
 
-    /* Passo 1: contar a frequencia de cada simbolo no arquivo de entrada */
     if (!contar_frequencias_arquivo(huffman, caminho_entrada)) {
         return 0;
     }
 
-    /* Passo 2: construir a Arvore de Huffman a partir das frequencias */
     if (!construir_arvore_huffman(huffman)) {
         return 0;
     }
 
-    /* Passo 3: gerar a tabela de codigos binarios de cada simbolo */
     if (!gerar_tabela_codigos(huffman)) {
         return 0;
     }
 
-    /* Passo 4: gravar o cabecalho e os bits codificados no arquivo de saida */
-    FILE *entrada = fopen(caminho_entrada, "rb");
+    FILE *entrada = fopen(caminho_entrada, "r");
     if (entrada == NULL) {
         return 0;
     }
@@ -566,27 +488,23 @@ int descompactar_arquivo(Huffman *huffman,
         return 0;
     }
 
-    /* Passo 1: ler e validar o cabecalho com a tabela de frequencias */
     unsigned long bytes_cab = 0;
     if (!ler_cabecalho(huffman, entrada, &bytes_cab)) {
         fclose(entrada);
         return 0;
     }
 
-    /* Passo 2: reconstruir exatamente a mesma Arvore de Huffman */
     if (!construir_arvore_huffman(huffman)) {
         fclose(entrada);
         return 0;
     }
 
-    /* Passo 3: gerar a tabela de codigos (permite consulta/impressao apos descompactar) */
     if (!gerar_tabela_codigos(huffman)) {
         fclose(entrada);
         return 0;
     }
 
-    /* Passo 4: decodificar os bits e reconstruir o arquivo de texto original */
-    FILE *saida = fopen(caminho_saida, "wb");
+    FILE *saida = fopen(caminho_saida, "w");
     if (saida == NULL) {
         fclose(entrada);
         return 0;
@@ -642,8 +560,6 @@ int comparar_arquivos(const char *caminho_a, const char *caminho_b) {
     fclose(arq_b);
     return iguais;
 }
-
-/* --- Consultas de estatisticas --- */
 
 unsigned long obter_tamanho_original(const Huffman *huffman) {
     return (huffman != NULL) ? huffman->tamanho_original : 0;
@@ -709,7 +625,23 @@ double obter_media_bits_por_simbolo(const Huffman *huffman) {
     return (double) total_bits / (double) huffman->tamanho_original;
 }
 
-/* --- Funcoes de exibicao --- */
+double obter_entropia_shannon(const Huffman *huffman) {
+    if (huffman == NULL || huffman->tamanho_original == 0) {
+        return 0.0;
+    }
+
+    double entropia = 0.0;
+    double total = (double) huffman->tamanho_original;
+    int i;
+    for (i = 0; i < TOTAL_SIMBOLOS; i++) {
+        if (huffman->frequencias[i] > 0) {
+            double p = (double) huffman->frequencias[i] / total;
+            entropia -= p * calcular_log2(p);
+        }
+    }
+
+    return entropia;
+}
 
 void imprimir_tabela_codigos(const Huffman *huffman) {
     if (huffman == NULL || huffman->simbolos_distintos == 0) {
@@ -769,7 +701,9 @@ void imprimir_resumo_huffman(const Huffman *huffman) {
     printf("Tamanho total compactado   : %lu bytes (%.2f KB)\n",
            huffman->tamanho_compactado,
            (double) huffman->tamanho_compactado / 1024.0);
-    printf("Media de bits/simbolo      : %.2f bits (original: 8.00 bits)\n",
+    printf("Entropia de Shannon (H)    : %.4f bits/simbolo\n",
+           obter_entropia_shannon(huffman));
+    printf("Media de bits/simbolo (L)  : %.4f bits (original: 8.00 bits)\n",
            obter_media_bits_por_simbolo(huffman));
     printf("Reducao real (c/ cabecalho): %.2f%%\n", obter_taxa_reducao(huffman));
     printf("Reducao dados (s/ cabec.)  : %.2f%%\n", obter_taxa_reducao_dados(huffman));

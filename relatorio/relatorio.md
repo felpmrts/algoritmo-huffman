@@ -4,106 +4,105 @@
 **Disciplina:** FACOM32402 – Estrutura de Dados II (2026/2)  
 **Professor:** Renato Pimentel  
 
-> **Instrução para o grupo antes de gerar o PDF final:** substitua os campos `[Nome Completo — Matrícula]` abaixo pelos dados reais dos 5 a 7 integrantes do grupo, ajuste os papéis caso necessário, e gere o PDF final com **exatamente 3 páginas em formato A4** (usando `relatorio.tex` no Overleaf ou `relatorio.html` via imprimir/salvar em PDF no navegador).
-
 ---
 
-## 1. Integrantes e Papéis Desempenhados
+## 1. Integrantes do Grupo e Papéis Desempenhados
 
-| Integrante | Matrícula | Papel Desempenhado no Trabalho |
-| :--- | :--- | :--- |
-| `[Nome do Integrante 1]` | `[Matrícula 1]` | Pesquisa teórica do algoritmo de Huffman, especificação da arquitetura modular e revisão técnica do relatório. |
-| `[Nome do Integrante 2]` | `[Matrícula 2]` | Projeto e implementação do TAD opaco `ArvoreHuffman` (`ArvoreHuffman.h` e `ArvoreHuffman.c`) com base na árvore binária da disciplina. |
-| `[Nome do Integrante 3]` | `[Matrícula 3]` | Projeto e implementação do TAD opaco `FilaPrioridade` (`FilaPrioridade.h` e `FilaPrioridade.c`) utilizando *min-heap* binário. |
-| `[Nome do Integrante 4]` | `[Matrícula 4]` | Implementação do módulo `Huffman` (`Huffman.h` e `Huffman.c`): contagem de frequências, geração de códigos, cabeçalho e compactação/descompactação bit a bit. |
-| `[Nome do Integrante 5]` | `[Matrícula 5]` | Desenvolvimento da interface em `main.c`, elaboração dos arquivos de teste em `dados/`, testes de casos especiais, análise no Valgrind e discussão dos resultados. |
-
-*(Caso o grupo possua 6 ou 7 integrantes, adicione linhas extras com papéis específicos — por exemplo, validação de integridade/testes automatizados e redação/diagramação das referências e do relatório — evitando descrições genéricas.)*
+| Integrante | Papel Desempenhado no Desenvolvimento |
+| :--- | :--- |
+| **Felipe César Martins** | Arquitetura inicial do repositório, integração entre os TADs opacos e implementação do controle de compactação e descompactação em `Huffman.h/.c`. |
+| **Rhyan Videira Barros Guidastre** | Revisão de conformidade com os requisitos, auditoria de memória (Valgrind), curadoria do corpus literário real e redação final do relatório. |
+| **Renan Cesar Vieira Mallagoli** | Projeto e implementação do TAD opaco `ArvoreHuffman` (`ArvoreHuffman.h/.c`), adaptado da árvore binária apresentada em aula. |
+| **Arthur Souza Moura** | Projeto e implementação do TAD opaco `FilaPrioridade` (`FilaPrioridade.h/.c`) baseado em *min-heap* binário com ordenação canônica determinística. |
+| **Hugo Vieira Pereira Rocha** | Especificação do formato binário do cabeçalho (`.huff`), rotinas de empacotamento/leitura bit a bit e validação estrita de integridade. |
+| **Sofia Oliveira Ferreira da Silva Cruz** | Desenvolvimento da interface interativa e de linha de comando em `main.c`, execução da bateria experimental e análise de entropia e taxas de compressão. |
+| **Kaio Antunes Silveira** | Implementação da geração recursiva da tabela de códigos livres de prefixo e validação dos casos de fronteira (arquivo vazio, símbolo único e corrupção). |
 
 ---
 
 ## 2. O Algoritmo de Huffman e sua Lógica de Funcionamento
 
-O algoritmo de Huffman, proposto por David A. Huffman em 1952, é um método clássico de **compressão de dados sem perdas** (*lossless*) baseado na estratégia **gulosa** (*greedy*). Em arquivos de texto comuns (ASCII ou UTF-8), cada byte ocupa um tamanho fixo de **8 bits**, independentemente de o caractere aparecer milhares de vezes (como espaços e vogais) ou apenas uma vez (como símbolos raros).
+O algoritmo de Huffman, proposto por David A. Huffman em 1952, é um método clássico de **compressão de dados sem perdas** (*lossless*) fundamentado na estratégia **gulosa** (*greedy*). Em arquivos de texto comuns (ASCII ou UTF-8), cada byte ocupa um tamanho fixo de **8 bits**, independentemente de ocorrer milhares de vezes (como espaços e vogais) ou apenas raramente (como letras maiúsculas específicas e sinais gráficos).
 
-A ideia central do algoritmo de Huffman é substituir essa representação de tamanho fixo por **códigos binários de comprimento variável**, atribuindo:
-- **Códigos curtos** aos símbolos com **maior frequência** no arquivo;
-- **Códigos mais longos** aos símbolos com **menor frequência**.
-
-Para que a decodificação ocorra sem ambiguidade e sem a necessidade de separadores entre os símbolos, o algoritmo produz **códigos livres de prefixo** (*prefix-free codes*): nenhum código válido é prefixo inicial de outro. Estruturalmente, essa propriedade é garantida ao armazenar todos os símbolos exclusivamente nos **nós folha** de uma árvore binária completa.
+A ideia central de Huffman consiste em substituir a representação fixa por **códigos binários de comprimento variável**: símbolos mais frequentes recebem sequências curtas de bits, enquanto símbolos menos frequentes recebem sequências mais longas. Para garantir decodificação sem ambiguidade e sem caracteres delimitadores, o algoritmo constrói **códigos livres de prefixo** (*prefix-free*): nenhum código válido é prefixo inicial de outro. Estruturalmente, essa propriedade é assegurada ao posicionar todos os símbolos exclusivamente nos **nós folha** de uma árvore binária completa.
 
 ### Etapas do Algoritmo
-1. **Contagem de frequências:** percorre-se o arquivo de entrada contabilizando o número de ocorrências de cada byte possível ($0$ a $255$).
-2. **Inicialização da fila de prioridade mínima:** para cada símbolo com frequência maior que zero, cria-se um nó folha contendo `(simbolo, frequencia)` e insere-se esse nó em uma fila de prioridade mínima (*min-heap*).
-3. **Construção gulosa da Árvore de Huffman:** enquanto restar mais de um nó na fila, removem-se os **dois nós de menor frequência**, cria-se um novo nó interno tendo ambos como filhos (com frequência igual à soma das frequências dos filhos) e reinsere-se o nó interno na fila. O último nó restante torna-se a raiz da árvore.
-4. **Geração da tabela de códigos:** realiza-se um percurso em profundidade a partir da raiz, acrescentando o bit `0` ao seguir para o filho esquerdo e o bit `1` ao seguir para o filho direito. Ao atingir uma folha, o caminho acumulado define o código binário do símbolo.
-5. **Compactação e descompactação:** na compactação, cada byte do texto original é trocado por seu código binário e empacotado em bytes de 8 bits. Na descompactação, lê-se o fluxo de bits caminhando da raiz até as folhas (`0` à esquerda, `1` à direita) até restaurar exatamente o total de caracteres originais.
+1. **Contagem de frequências:** percorre-se o arquivo de entrada contabilizando o número de ocorrências de cada valor de byte possível ($0$ a $255$).
+2. **Inicialização da fila de prioridade mínima:** para cada símbolo com frequência maior que zero, cria-se um nó folha contendo `(simbolo, frequencia)` e insere-se esse nó em um *min-heap*.
+3. **Construção gulosa da Árvore de Huffman:** enquanto restar mais de um nó na fila, removem-se os dois nós de menor frequência, cria-se um nó interno pai com frequência igual à soma dos filhos e reinsere-se o pai na fila. O último nó restante torna-se a raiz da árvore.
+4. **Geração da tabela de códigos:** em um percurso em profundidade a partir da raiz, cada ramo esquerdo acrescenta o bit `0` e cada ramo direito acrescenta o bit `1`; ao atingir uma folha, registra-se o código binário definitivo daquele símbolo.
+5. **Compactação e descompactação:** cada byte do texto original é substituído por seu código e empacotado em bytes de 8 bits. Na descompactação, lê-se o fluxo bit a bit caminhando da raiz às folhas (`0` à esquerda, `1` à direita) até restaurar exatamente o total de bytes originais.
+
+Segundo o Teorema de Shannon para codificação de fonte, o comprimento médio $\bar{L}$ em bits por símbolo de um código ótimo livre de prefixo satisfaz $H(X) \le \bar{L} < H(X) + 1$, em que $H(X) = -\sum_i p_i \log_2(p_i)$ é a entropia da fonte.
 
 **Por que não utilizar Árvore AVL?**  
-Conforme discutido na disciplina, árvores AVL aplicam rotações para manter a altura balanceada entre subárvores. No algoritmo de Huffman, entretanto, o desbalanceamento é intencional e essencial: símbolos muito frequentes devem permanecer próximos à raiz (gerando códigos de 2 ou 3 bits), enquanto símbolos raros ficam em níveis mais profundos. Balancear a árvore destruiria a otimização dos comprimentos de código.
+Árvores AVL realizam rotações para manter a altura balanceada entre suas subárvores. No algoritmo de Huffman, o desbalanceamento é intencional e indispensável: símbolos muito frequentes devem permanecer próximos à raiz (gerando códigos curtos de 2 a 4 bits), enquanto símbolos raros ficam em níveis profundos. Aplicar rotações de balanceamento alteraria as profundidades das folhas e destruiria a otimalidade do comprimento médio dos códigos.
 
 ---
 
-## 3. Detalhes da Implementação em C
+## 3. Detalhes da Implementação em Linguagem C
 
-O sistema foi implementado em linguagem C padrão (`C99`), estruturado em **quatro módulos independentes** que seguem rigorosamente o princípio de **Tipo Abstrato de Dados (TAD) opaco**, inspirado no código de `ArvoreBinaria` da disciplina:
+O sistema foi desenvolvido em linguagem C padrão (`C99`), compilado sem avisos sob `-Wall -Wextra -pedantic -std=c99` e estruturado em quatro módulos independentes. Tomando como ponto de partida a estrutura de dados de árvore binária vista no curso (`ArvoreBinaria`), todos os dados internos foram protegidos por **Tipos Abstratos de Dados (TADs) opacos**: nenhuma definição de `struct` é exposta nos cabeçalhos (`.h`), restringindo qualquer manipulação às funções públicas previstas.
 
-- **`ArvoreHuffman.h` / `ArvoreHuffman.c`**: define os tipos opacos `NoHuffman` e `ArvoreHuffman`. Nenhuma `struct` é exposta no `.h`; toda criação de nós (folha/interno), acesso a campos (`obter_simbolo_no`, `obter_frequencia_no`, `obter_esquerda_no`, `obter_direita_no`), cálculo de altura, contagem de nós e liberação pós-ordem ocorre exclusivamente pelas funções públicas.
-- **`FilaPrioridade.h` / `FilaPrioridade.c`**: encapsula o TAD opaco `FilaPrioridade`, implementado como um *min-heap* binário em vetor (`subir_heap` e `descer_heap`), garantindo inserção e remoção do menor elemento em tempo $O(\log k)$, onde $k \le 256$ é a quantidade de símbolos distintos.
-- **`Huffman.h` / `Huffman.c`**: encapsula o TAD opaco `Huffman`, coordenando todas as fases do algoritmo, estatísticas de compressão, leitura/escrita em nível de bits e verificação de integridade byte a byte (`comparar_arquivos`).
-- **`main.c`**: interface didática com menu interativo e modo linha de comando (`-c`, `-d`, `-t`, `-b`, `-e`), utilizando exclusivamente a interface pública de `Huffman.h`.
+### 3.1 Arquitetura Modular e Encapsulamento em TADs Opacos
+- **`ArvoreHuffman.h/.c`**: declara os tipos opacos `NoHuffman` e `ArvoreHuffman`. Disponibiliza funções para criar nós folha e internos, consultar símbolo, frequência e filhos, comparar nós (`comparar_nos_huffman`) e gerar os códigos diretamente da árvore (`gerar_codigos_arvore_huffman`), além de calcular altura, contar nós ($2k - 1$), imprimir em pré-ordem e liberar memória em pós-ordem.
+- **`FilaPrioridade.h/.c`**: encapsula o TAD opaco `FilaPrioridade`, implementado como um *min-heap* binário em vetor com as rotinas internas `subir_heap` e `descer_heap` baseadas em `comparar_nos_huffman`. Para um índice $i$, o pai está em $(i-1)/2$ e os filhos em $2i+1$ e $2i+2$, garantindo inserção e remoção em tempo $O(\log k)$, com $k \le 256$.
+- **`Huffman.h/.c`**: encapsula o TAD opaco `Huffman` (frequências, ponteiro para `ArvoreHuffman`, tabela de códigos e métricas). Abre os textos originais e restaurados em **modo texto** (`"r"`/`"w"`) e o arquivo compactado em modo binário (`"rb"`/`"wb"`). Calcula também a entropia de Shannon $H(X)$ via `obter_entropia_shannon` em C99 puro, sem dependência externa da biblioteca `-lm`.
+- **`main.c`**: fornece menu interativo e interface de linha de comando (`-c`, `-d`, `-t`, `-b`, `-e`), utilizando exclusivamente as funções públicas de `Huffman.h`. Localiza automaticamente os arquivos de teste tanto em `dados/` quanto no diretório raiz.
 
-### Formato do Arquivo Compactado (`.huff`) e Empacotamento de Bits
-Para que o arquivo compactado seja autossuficiente na descompactação, grava-se um cabeçalho compacto composto por:
-1. Assinatura mágica `"HUF1"` (4 bytes) para validar o formato do arquivo;
-2. Total de bytes do arquivo original (`uint64_t`, 8 bytes);
-3. Quantidade $k$ de símbolos distintos presentes (`uint16_t`, 2 bytes);
-4. Tabela de frequências contendo $k$ pares `(uint8_t simbolo, uint32_t frequencia)` em ordem crescente ($0..255$), totalizando $14 + 5k$ bytes de cabeçalho.
+### 3.2 Formato do Cabeçalho Binário (`.huff`) e Manipulação de Bits
+Para que o arquivo compactado seja autossuficiente na descompactação, grava-se um cabeçalho binário compacto de $14 + 5k$ bytes antes dos dados codificados:
 
-Na escrita dos dados codificados, um acumulador `unsigned char byte_atual` recebe os bits por deslocamento à esquerda (`byte_atual = (byte_atual << 1) | bit`) até completar 8 bits. Caso o último byte fique incompleto, completa-se com zeros à direita (*padding*); na descompactação, o laço interrompe exatamente ao atingir o total de caracteres originais informado no cabeçalho, descartando os bits de preenchimento.
+| Campo do Cabeçalho | Tipo / Tamanho | Finalidade na Descompactação |
+| :--- | :---: | :--- |
+| Assinatura mágica | `"HUF1"` (4 bytes) | Identifica e valida se o arquivo foi gerado pelo programa. |
+| Total original | `uint64_t` (8 bytes) | Quantidade exata de bytes do texto original (controla o fim da leitura e o *padding*). |
+| Símbolos distintos ($k$) | `uint16_t` (2 bytes) | Quantidade de entradas ($0$ a $256$) gravadas na tabela de frequências. |
+| Tabela de frequências | $k \times (1 + 4\text{ bytes})$ | Pares `(uint8_t simbolo, uint32_t frequencia)` em ordem crescente ($0..255$). |
 
-### Tratamento de Casos Especiais e Validação
-- **Arquivo vazio (0 bytes):** grava cabeçalho válido com `total_original = 0` e restaura um arquivo vazio sem erros.
-- **Arquivo com 1 único símbolo distinto (ex.: `"AAAA..."`):** como a raiz já é folha, atribui-se explicitamente o código `"0"` (1 bit) e a descompactação trata esse caso diretamente.
-- **Determinismo da árvore:** os símbolos são inseridos no *min-heap* sempre na ordem crescente $0..255$ tanto na compactação quanto na descompactação, garantindo a reconstrução da mesma árvore.
-- **Memória e fidelidade:** os arquivos são abertos em modo binário (`"rb"` / `"wb"`) para preservar quebras de linha e acentos UTF-8 em qualquer sistema operacional. A execução sob **Valgrind** confirmou **0 erros e 0 bytes vazados** em toda a bateria de testes.
+Na escrita dos dados codificados, cada bit é inserido em um acumulador `unsigned char` por deslocamento à esquerda: `byte_atual = (byte_atual << 1) | bit`. Ao completar 8 bits, grava-se o byte via `fputc`. Se restarem bits pendentes ao final ($< 8$ bits), aplica-se deslocamento à esquerda (`byte_atual << (8 - bits_no_byte)`) preenchendo o restante com zeros (*padding*). Na descompactação, os bits são lidos da posição 7 até 0 via `(byte_lido >> pos_bit) & 1`, percorrendo a árvore até que o total decodificado iguale `tamanho_original`.
+
+### 3.3 Casos de Fronteira, Determinismo Canônico e Validação de Memória
+- **Arquivo vazio (0 bytes):** grava um cabeçalho de 14 bytes com `total_original = 0` e $k = 0$, validando ausência de dados excedentes e restaurando um arquivo vazio idêntico.
+- **Arquivo com 1 único símbolo distinto (ex.: `"AAA..."`):** como a raiz já é folha, atribui-se o código `"0"` (1 bit/ocorrência); na descompactação, qualquer bit igual a `1` é rejeitado como erro de integridade.
+- **Determinismo canônico no *min-heap*:** a função `comparar_nos_huffman` desempata frequências iguais priorizando nós folha antes de nós internos e, em seguida, o menor byte (`menor_simbolo`) da subárvore. Assim, a árvore gerada é única e idêntica tanto na compactação quanto na reconstrução.
+- **Validação estrita de *padding* e memória:** ao concluir a decodificação, o programa verifica se os bits residuais do último byte são nulos e se o fluxo atingiu `EOF` sem bytes espúrios. A auditoria via **Valgrind** (`--leak-check=full`) atestou **0 erros e 0 bytes vazados** nas 2.725 alocações da bateria de testes.
 
 ---
 
 ## 4. Testes Experimentais e Discussão dos Resultados
 
-Os testes foram realizados com cinco arquivos de texto simples em português de escalas crescentes (de ~2 KB a ~500 KB), localizados na pasta `dados/`. Em cada teste, o arquivo foi compactado, descompactado e comparado byte a byte com o original.
+Os experimentos foram realizados utilizando cinco obras completas em língua portuguesa de Machado de Assis (em domínio público, UTF-8), cobrindo escalas de alguns KB (~3,2 KB), dezenas de KB (~16,1 KB e ~49,8 KB) e centenas de KB (~202,1 KB e ~447,8 KB). Em todos os testes, o arquivo compactado (`.huff`) foi descompactado e validado byte a byte contra o original.
 
-| Arquivo (`dados/`) | Original | Símbolos ($k$) | Nós ($2k-1$) | Cabeçalho | Dados Codif. | Compactado Total | Bits/Símb. | Redução Real | Redução Dados | Integridade |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `texto_pequeno_2kb.txt` | 2.414 B (2,36 KB) | 58 | 115 | 304 B | 1.326 B | 1.630 B (1,59 KB) | 4,39 | **32,48%** | 45,07% | OK |
-| `texto_medio_15kb.txt` | 14.927 B (14,58 KB) | 69 | 137 | 359 B | 8.213 B | 8.572 B (8,37 KB) | 4,40 | **42,57%** | 44,98% | OK |
-| `texto_medio_50kb.txt` | 51.118 B (49,92 KB) | 69 | 137 | 359 B | 28.168 B | 28.527 B (27,86 KB) | 4,41 | **44,19%** | 44,90% | OK |
-| `texto_grande_200kb.txt` | 204.523 B (199,73 KB) | 69 | 137 | 359 B | 112.977 B | 113.336 B (110,68 KB) | 4,42 | **44,59%** | 44,76% | OK |
-| `texto_grande_500kb.txt` | 511.711 B (499,72 KB) | 69 | 137 | 359 B | 283.272 B | 283.631 B (276,98 KB) | 4,43 | **44,57%** | 44,64% | OK |
+| Arquivo de Entrada | Obra Literária | Original | $k$ | Nós | Cabeç. | Compact. | $H$ (bits) | $\bar{L}$ (bits) | Red. Real | Red. Dad. | Int. |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `texto_pequeno_2kb.txt` | Carta à Imprensa | 3.282 B | 71 | 141 | 369 B | 2.255 B | 4,5590 | 4,5969 | **31,29%** | 42,54% | OK |
+| `texto_medio_15kb.txt` | Castro Alves | 16.453 B | 75 | 149 | 389 B | 9.730 B | 4,5048 | 4,5418 | **40,86%** | 43,23% | OK |
+| `texto_medio_50kb.txt` | As Forcas Caudinas | 50.976 B | 87 | 173 | 449 B | 32.556 B | 5,0140 | 5,0387 | **36,13%** | 37,02% | OK |
+| `texto_grande_200kb.txt` | A Mão e a Luva | 207.000 B | 102 | 203 | 524 B | 118.563 B | 4,5305 | 4,5619 | **42,72%** | 42,98% | OK |
+| `texto_grande_500kb.txt` | Quincas Borba | 458.506 B | 103 | 205 | 529 B | 266.765 B | 4,6102 | 4,6453 | **41,82%** | 41,93% | OK |
 
-### Discussão dos Resultados
-1. **Impacto do cabeçalho em arquivos pequenos:** no arquivo de 2,36 KB, embora os dados codificados tenham reduzido **45,07%**, a redução real final foi de **32,48%**. Isso ocorre porque o cabeçalho (304 bytes) corresponde a **12,59%** do tamanho original. Esse resultado evidencia o custo fixo de armazenar a tabela de frequências para tornar o arquivo autossuficiente.
-2. **Convergência da taxa de compressão com o crescimento do arquivo:** a partir de 15 KB, o alfabeto utilizado se estabiliza em $k = 69$ símbolos distintos, mantendo o cabeçalho constante em **359 bytes** ($14 + 5 \times 69$). Assim, o peso relativo do cabeçalho cai de 2,41% (15 KB) para apenas **0,07%** (500 KB), fazendo a redução real convergir de **32,48%** para **~44,6%** — praticamente idêntica à redução pura dos dados.
-3. **Eficiência média em bits e propriedade estrutural:** em todos os arquivos, a média de bits por caractere caiu de **8,00 bits** para **4,39–4,43 bits**, coerente com a entropia típica de textos em português. Observa-se também a propriedade matemática exata das árvores binárias completas: para $k$ folhas, o número de nós é sempre $2k - 1$ ($115$ nós para $58$ símbolos e $137$ nós para $69$ símbolos).
-4. **Fidelidade e desempenho:** todos os arquivos testados — além dos 4 casos especiais (arquivo vazio, caractere único repetido, texto curto com UTF-8 e arquivo inexistente) — passaram na comparação byte a byte (`OK`), com tempos de execução inferiores a 50 ms mesmo para 500 KB.
+### Discussão dos Resultados Observados
+- **Impacto do cabeçalho conforme a escala do arquivo:** no texto pequeno de 3.282 B (*Carta à Imprensa Acadêmica*), os dados codificados reduziram **42,54%**, porém a redução real caiu para **31,29%** porque o cabeçalho (369 B) equivale a **11,24%** do original. Nos romances de 207 KB e 458 KB, o cabeçalho de 524–529 B cai para apenas **0,25%** e **0,12%** do total, fazendo a redução real convergir para a redução pura dos dados (**42,72%** e **41,82%**).
+- **Influência do gênero textual na entropia e na compactação:** a amostra de ~50 KB (*As Forcas Caudinas*) apresentou entropia maior ($H = 5{,}0140$ bits) e redução real de **36,13%**, abaixo da prosa corrida ($H \approx 4{,}50\text{--}4{,}61$ e redução de 40,8%–42,7%). Como se trata de uma **peça teatral**, há recorrência de nomes em caixa-alta (`SEABRA`, `MARGARIDA`, `TITO`), travessões e rubricas cênicas, tornando a distribuição de frequências menos concentrada.
+- **Proximidade do limite teórico de Shannon e estrutura da árvore:** em todas as cinco obras verifica-se o Teorema de Shannon ($H(X) \le \bar{L} < H(X) + 1$), com o comprimento médio $\bar{L}$ ficando a menos de **0,038 bits/símbolo** acima da entropia $H$ (eficiência de codificação superior a **99,1%**). Além disso, todas as árvores respeitam a identidade exata de árvore binária estritamente completa ($2k - 1$ nós) e restauração 100% fiel.
 
 ---
 
-## 5. Materiais Consultados, Links e Justificativa da Escolha
+## 5. Links dos Textos Utilizados, Referências e Justificativa da Escolha
 
-1. **HUFFMAN, David A. (1952).** *A Method for the Construction of Minimum-Redundancy Codes*. Proceedings of the IRE, vol. 40, nº 9, pp. 1098–1101.  
-   - **Link:** <https://ieeexplore.ieee.org/document/273898> (cópia pública em PDF: <https://www.coit.es/foro-historico/sites/default/files/ficheros_adjuntos/a_method_for_the_construction_of_minimum_redundancy_codes.pdf>)  
-   - **Justificativa:** escolhido por ser a fonte primária original que formaliza matematicamente o algoritmo e prova a otimalidade dos códigos livres de prefixo de redundância mínima.
-2. **FEOFILOFF, Paulo (IME-USP).** *Análise de Algoritmos — Código de Huffman e Filas-com-Prioridades* e *Árvores Binárias de Busca em C*.  
-   - **Links:** <https://www.ime.usp.br/~pf/analise_de_algoritmos/> e <https://www.ime.usp.br/~pf/algoritmos/aulas/binst.html>  
-   - **Justificativa:** material acadêmico em português amplamente adotado em universidades brasileiras (inclusive referenciado no código-base da disciplina), escolhido pela clareza didática ao relacionar filas de prioridade (*min-heap*) à construção ótima da árvore de Huffman.
-3. **PIMENTEL, Renato (FACOM/UFU).** *Código de Referência — TAD Opaco de Árvore Binária em C (FACOM32402)*.  
-   - **Link:** <https://onlinegdb.com/eqb9wEDY6>  
-   - **Justificativa:** ponto de partida oficial recomendado no enunciado do trabalho para padronizar o estilo de encapsulamento em TAD opaco e a organização entre arquivos `.h` e `.c`.
-4. **CORMEN, T. H.; LEISERSON, C. E.; RIVEST, R. L.; STEIN, C.** *Introduction to Algorithms* (Cap. 16.3 — *Huffman Codes*). MIT Press.  
-   - **Link:** <https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/>  
-   - **Justificativa:** livro-texto clássico da área, consultado para verificar a corretude da escolha gulosa e a análise de complexidade $O(k \log k)$ na construção da árvore.
-5. **GEEKSFORGEEKS.** *Huffman Coding | Greedy Algo-3*.  
-   - **Link:** <https://www.geeksforgeeks.org/huffman-coding-greedy-algo-3/>  
-   - **Justificativa:** consultado como apoio prático complementar por apresentar exemplos passo a passo da combinação de nós na fila de prioridade e da atribuição dos códigos binários.
+### A) Textos de Entrada Utilizados nos Testes (Obras de Machado de Assis — Domínio Público / MEC)
+- **Acervo oficial (MEC) e repositório dos arquivos `.txt`:** <http://machado.mec.gov.br/> e <https://github.com/luxedo/dataset-machado-de-assis>.
+- **Links diretos dos 5 textos:**
+  1. `texto_pequeno_2kb.txt`: <https://raw.githubusercontent.com/luxedo/dataset-machado-de-assis/master/txt/miscel%C3%A2nea/cartaImprensa.txt>
+  2. `texto_medio_15kb.txt`: <https://raw.githubusercontent.com/luxedo/dataset-machado-de-assis/master/txt/cr%C3%ADtica/castroAlves.txt>
+  3. `texto_medio_50kb.txt`: <https://raw.githubusercontent.com/luxedo/dataset-machado-de-assis/master/txt/teatro/forcas.txt>
+  4. `texto_grande_200kb.txt`: <https://raw.githubusercontent.com/luxedo/dataset-machado-de-assis/master/txt/romance/maoLuva.txt>
+  5. `texto_grande_500kb.txt`: <https://raw.githubusercontent.com/luxedo/dataset-machado-de-assis/master/txt/romance/quincas.txt>
+- **Justificativa da escolha dos textos:** selecionaram-se obras integrais e reais em português cobrindo tamanhos naturais de ~3 KB a ~458 KB para avaliar simultaneamente a diluição do cabeçalho com a escala e o impacto de diferentes gêneros (carta, crítica, teatro e romances) sobre a entropia e o desempenho de Huffman.
+
+### B) Referências Teóricas e Técnicas Consultadas
+1. **HUFFMAN, D. A. (1952).** *A Method for the Construction of Minimum-Redundancy Codes*. Proceedings of the IRE, 40(9), 1098–1101. Link: <https://ieeexplore.ieee.org/document/273898>. *Justificativa:* artigo original que formaliza o algoritmo e prova a otimalidade dos códigos livres de prefixo.
+2. **PIMENTEL, R. (FACOM/UFU).** *Implementação de Árvore Binária em C (TAD Opaco)*. Link: <https://onlinegdb.com/eqb9wEDY6>. *Justificativa:* código de partida indicado no enunciado da disciplina para estruturar o encapsulamento dos TADs opacos.
+3. **FEOFILOFF, P. (IME-USP).** *Análise de Algoritmos: Código de Huffman e Filas de Prioridade*. Link: <https://www.ime.usp.br/~pf/analise_de_algoritmos/>. *Justificativa:* referência acadêmica em português escolhida para fundamentar a construção da árvore de Huffman sobre um *min-heap* binário.
+4. **CORMEN, T. H. et al.** *Algoritmos: Teoria e Prática* (Cap. 16.3 — Códigos de Huffman). Link: <https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/>. *Justificativa:* utilizado para validar a propriedade da escolha gulosa e a complexidade $O(k \log k)$ de montagem da árvore.

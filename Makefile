@@ -3,7 +3,7 @@ CFLAGS = -Wall -Wextra -std=c99 -O2 -Isrc
 TARGET = huffman
 SRCS = src/ArvoreHuffman.c src/FilaPrioridade.c src/Huffman.c src/main.c
 
-.PHONY: all testar valgrind limpar
+.PHONY: all testar valgrind pdf limpar
 
 all: $(TARGET)
 
@@ -17,6 +17,9 @@ testar: $(TARGET)
 valgrind: $(TARGET)
 	valgrind --leak-check=full --show-leak-kinds=all --error-exitcode=1 ./$(TARGET) -e
 	valgrind --leak-check=full --show-leak-kinds=all --error-exitcode=1 ./$(TARGET) -b
+
+pdf:
+	cd relatorio && pdflatex -interaction=nonstopmode relatorio.tex && rm -f relatorio.aux relatorio.log
 
 limpar:
 	rm -f $(TARGET) *.o temp_*.huff temp_*.txt

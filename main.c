@@ -19,7 +19,7 @@ static int ler_linha(const char *prompt, char *dest, int tam) {
     return 1;
 }
 
-// Localiza o arquivo em "dados/" ou no diretorio atual (para entrega sem subpastas)
+// Localiza o arquivo em "dados/" ou no diretorio atual; retorna NULL se ausente
 static const char *resolver_caminho_arquivo(const char *caminho_padrao, const char *nome_curto) {
     FILE *f = fopen(caminho_padrao, "r");
     if (f != NULL) {
@@ -31,7 +31,7 @@ static const char *resolver_caminho_arquivo(const char *caminho_padrao, const ch
         fclose(f);
         return nome_curto;
     }
-    return caminho_padrao;
+    return NULL;
 }
 
 // Compacta, descompacta, mede tempos e confere integridade em modo texto
@@ -103,8 +103,12 @@ static int executar_bateria_testes(Huffman *huffman) {
     printf("--------------------------+-----------+------+------+---------+-----------+----------+----------+----------+----------+------\n");
 
     int todos_ok = 1;
+    int executados = 0;
     for (int i = 0; i < total; i++) {
         const char *caminho = resolver_caminho_arquivo(caminhos[i], nomes[i]);
+        if (caminho == NULL) continue;
+
+        executados++;
         if (!compactar_arquivo(huffman, caminho, arq_huff)) {
             printf("%-25s | ERRO ao abrir ou compactar\n", caminho);
             todos_ok = 0;
@@ -127,6 +131,14 @@ static int executar_bateria_testes(Huffman *huffman) {
                obter_taxa_reducao(huffman),
                obter_taxa_reducao_dados(huffman),
                integro ? "OK" : "ERRO");
+    }
+
+    if (executados == 0) {
+        printf("Nenhum arquivo de teste encontrado no diretorio atual ou em dados/.\n");
+        todos_ok = 0;
+    } else if (executados < total) {
+        printf("(%d de %d textos do corpus presentes no diretorio e validados)\n",
+               executados, total);
     }
 
     remove(arq_huff);
@@ -210,7 +222,7 @@ static void executar_menu_interativo(Huffman *huffman) {
         printf("1. Compactar arquivo de texto\n");
         printf("2. Descompactar arquivo (.huff)\n");
         printf("3. Testar arquivo (compactar + descompactar + verificar)\n");
-        printf("4. Executar bateria de testes (5 textos)\n");
+        printf("4. Executar bateria de testes (textos disponiveis)\n");
         printf("5. Executar testes de casos de fronteira\n");
         printf("6. Exibir tabela de codigos e arvore da ultima operacao\n");
         printf("0. Sair\n");
@@ -278,7 +290,7 @@ static void exibir_ajuda_uso(const char *nome) {
     printf("  %s -c <in> <out>        -> Compactar arquivo de texto\n", nome);
     printf("  %s -d <in> <out>        -> Descompactar arquivo .huff\n", nome);
     printf("  %s -t <entrada>         -> Testar compactacao e descompactacao\n", nome);
-    printf("  %s -b                   -> Bateria de testes nos 5 textos\n", nome);
+    printf("  %s -b                   -> Bateria de testes nos textos disponiveis\n", nome);
     printf("  %s -e                   -> Testes de casos de fronteira\n", nome);
 }
 

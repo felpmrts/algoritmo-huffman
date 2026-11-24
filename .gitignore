@@ -1,7 +1,0 @@
-# Binarios e arquivos temporarios de compilacao/execucao
-huffman
-*.o
-*.exe
-temp_*.huff
-temp_*.txt
-*.huff

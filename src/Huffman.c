@@ -50,6 +50,7 @@ static double calcular_log2(double x) {
     return resultado;
 }
 
+// Libera arvore e codigos anteriores e zera os contadores do TAD
 static void limpar_estado_huffman(Huffman *huffman) {
     if (huffman->arvore != NULL) {
         liberar_arvore_huffman(huffman->arvore);
@@ -306,6 +307,7 @@ void liberar_huffman(Huffman *huffman) {
     free(huffman);
 }
 
+// Compacta caminho_entrada (modo texto) gravando cabecalho e bits em caminho_saida
 int compactar_arquivo(Huffman *huffman, const char *caminho_entrada, const char *caminho_saida) {
     if (huffman == NULL || caminho_entrada == NULL || caminho_saida == NULL) return 0;
 
@@ -343,6 +345,7 @@ int compactar_arquivo(Huffman *huffman, const char *caminho_entrada, const char 
     return 1;
 }
 
+// Descompacta caminho_entrada (.huff) restaurando o texto original em caminho_saida
 int descompactar_arquivo(Huffman *huffman, const char *caminho_entrada, const char *caminho_saida) {
     if (huffman == NULL || caminho_entrada == NULL || caminho_saida == NULL) return 0;
 
@@ -444,6 +447,7 @@ double obter_taxa_reducao_dados(const Huffman *huffman) {
     return (1.0 - ((double) huffman->bytes_dados_codificados / (double) huffman->tamanho_original)) * 100.0;
 }
 
+// Calcula a media ponderada de bits por simbolo (original sem compressao = 8 bits)
 double obter_media_bits_por_simbolo(const Huffman *huffman) {
     if (huffman == NULL || huffman->tamanho_original == 0) return 0.0;
 
@@ -470,6 +474,7 @@ double obter_entropia_shannon(const Huffman *huffman) {
     return entropia;
 }
 
+// Exibe na tela os simbolos presentes, frequencias e codigos binarios gerados
 void imprimir_tabela_codigos(const Huffman *huffman) {
     if (huffman == NULL || huffman->simbolos_distintos == 0) {
         printf("(Tabela de codigos vazia)\n");
@@ -498,6 +503,7 @@ void imprimir_tabela_codigos(const Huffman *huffman) {
     }
 }
 
+// Exibe um resumo com tamanhos, entropia, media de bits e taxas de reducao
 void imprimir_resumo_huffman(const Huffman *huffman) {
     if (huffman == NULL) return;
 

@@ -7,6 +7,7 @@
 \usepackage{tabularx}
 \usepackage{xcolor}
 \usepackage[hyphens]{url}
+\usepackage[hidelinks]{hyperref}
 
 \setlength{\parskip}{3.2pt}
 \setlength{\parindent}{0pt}
@@ -173,10 +174,10 @@ Os experimentos foram realizados utilizando cinco obras completas em língua por
 
 \textbf{B) Referências Teóricas e Técnicas Consultadas:}
 \begin{enumerate}\setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}\setlength{\topsep}{2pt}
-  \item \textbf{HUFFMAN, D. A. (1952).} \emph{A Method for the Construction of Minimum-Redundancy Codes.} Proceedings of the IRE, 40(9), 1098--1101. Link: \url{https://ieeexplore.ieee.org/document/273898}. \emph{Justificativa:} artigo original que formaliza o algoritmo e prova a otimalidade dos códigos livres de prefixo.
+  \item \textbf{HUFFMAN, D. A. (1952).} \emph{A Method for the Construction of Minimum-Redundancy Codes.} Proceedings of the IRE, 40(9), 1098--1101. Link: \url{https://compression.ru/download/articles/huff/huffman_1952_minimum-redundancy-codes.pdf}. \emph{Justificativa:} artigo original em acesso aberto que formaliza o algoritmo e prova a otimalidade dos códigos livres de prefixo.
   \item \textbf{PIMENTEL, R. (FACOM/UFU).} \emph{Implementação de Árvore Binária em C (TAD Opaco).} Link: \url{https://onlinegdb.com/eqb9wEDY6}. \emph{Justificativa:} código de partida indicado no enunciado da disciplina para estruturar o encapsulamento dos TADs opacos.
-  \item \textbf{FEOFILOFF, P. (IME-USP).} \emph{Análise de Algoritmos: Código de Huffman e Filas de Prioridade.} Link: \url{https://www.ime.usp.br/~pf/analise_de_algoritmos/}. \emph{Justificativa:} referência acadêmica em português escolhida para fundamentar a construção da árvore de Huffman sobre um \emph{min-heap} binário.
-  \item \textbf{CORMEN, T. H. et al.} \emph{Algoritmos: Teoria e Prática} (Cap. 16.3 --- Códigos de Huffman). Link: \url{https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/}. \emph{Justificativa:} utilizado para validar a propriedade da escolha gulosa e a complexidade $O(k \log k)$ de montagem da árvore.
+  \item \textbf{FEOFILOFF, P. (IME-USP).} \emph{Código de Huffman para compressão de arquivos de texto.} Link: \url{https://www.ime.usp.br/~pf/analise_de_algoritmos/aulas/huffman.html}. \emph{Justificativa:} referência acadêmica gratuita em português escolhida para fundamentar a construção da árvore de Huffman sobre um \emph{min-heap} binário.
+  \item \textbf{SEDGEWICK, R.; WAYNE, K. (Princeton University).} \emph{Algorithms, 4th Edition --- Section 5.5: Data Compression.} Link: \url{https://algs4.cs.princeton.edu/55compression/}. \emph{Justificativa:} capítulo didático gratuito e respeitado de ciência da computação, utilizado para validar a estratégia gulosa, a complexidade $O(k \log k)$ com fila de prioridade e o formato de codificação bit a bit.
 \end{enumerate}
 
 \end{document}

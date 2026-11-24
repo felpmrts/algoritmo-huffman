@@ -200,6 +200,7 @@ static int executar_testes_casos_especiais(Huffman *huffman) {
     return todos_ok;
 }
 
+// Executa o menu interativo no terminal para operar o compressor
 static void executar_menu_interativo(Huffman *huffman) {
     char linha[TAM_CAMINHO], entrada[TAM_CAMINHO], saida[TAM_CAMINHO];
     int opcao = -1;
@@ -270,6 +271,7 @@ static void executar_menu_interativo(Huffman *huffman) {
     }
 }
 
+// Mostra os parametros aceitos via linha de comando
 static void exibir_ajuda_uso(const char *nome) {
     printf("Uso:\n");
     printf("  %s                      -> Menu interativo\n", nome);
@@ -280,6 +282,7 @@ static void exibir_ajuda_uso(const char *nome) {
     printf("  %s -e                   -> Testes de casos de fronteira\n", nome);
 }
 
+// Ponto de entrada: cria o TAD Huffman, executa o modo escolhido e libera a memoria
 int main(int argc, char *argv[]) {
     Huffman *huffman = criar_huffman();
     if (huffman == NULL) {

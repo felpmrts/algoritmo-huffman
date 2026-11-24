@@ -47,6 +47,7 @@ static void descer_heap(FilaPrioridade *fila, int indice) {
     }
 }
 
+// Aloca a fila de prioridade e o vetor de ponteiros do heap
 FilaPrioridade *criar_fila_prioridade(int capacidade) {
     if (capacidade <= 0) return NULL;
 
@@ -64,6 +65,7 @@ FilaPrioridade *criar_fila_prioridade(int capacidade) {
     return fila;
 }
 
+// Libera eventuais nos restantes, o vetor do heap e a struct da fila
 void liberar_fila_prioridade(FilaPrioridade *fila) {
     if (fila == NULL) return;
 
@@ -82,6 +84,7 @@ int tamanho_fila_prioridade(const FilaPrioridade *fila) {
     return (fila != NULL) ? fila->tamanho : 0;
 }
 
+// Insere um no ao final do vetor e sobe ate restaurar a propriedade do min-heap
 int inserir_fila_prioridade(FilaPrioridade *fila, NoHuffman *no) {
     if (fila == NULL || no == NULL || fila->tamanho >= fila->capacidade)
         return 0;
@@ -92,6 +95,7 @@ int inserir_fila_prioridade(FilaPrioridade *fila, NoHuffman *no) {
     return 1;
 }
 
+// Remove o menor no (raiz), move o ultimo item para o topo e reorganiza o heap
 NoHuffman *remover_menor_fila_prioridade(FilaPrioridade *fila) {
     if (fila == NULL || fila->tamanho == 0) return NULL;
 

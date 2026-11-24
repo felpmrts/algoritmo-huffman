@@ -7,284 +7,222 @@
 
 #define TAM_CAMINHO 256
 
-static void remover_quebra_linha(char *texto) {
-    size_t tam = strlen(texto);
-    if (tam > 0 && texto[tam - 1] == '\n') {
-        texto[tam - 1] = '\0';
-    }
-    tam = strlen(texto);
-    if (tam > 0 && texto[tam - 1] == '\r') {
-        texto[tam - 1] = '\0';
-    }
+// Exibe o prompt, le uma linha da entrada padrao e remove '\n' ou '\r' do final
+static int ler_linha(const char *prompt, char *dest, int tam) {
+    if (prompt != NULL) printf("%s", prompt);
+    if (fgets(dest, tam, stdin) == NULL) return 0;
+
+    size_t len = strlen(dest);
+    while (len > 0 && (dest[len - 1] == '\n' || dest[len - 1] == '\r'))
+        dest[--len] = '\0';
+
+    return 1;
 }
 
-/*
- * Localiza o arquivo de teste tanto na subpasta "dados/" quanto no diretorio
- * atual (util quando todos os arquivos sao entregues juntos sem subpastas).
- */
-static const char *resolver_caminho_arquivo(const char *caminho_padrao,
-                                            const char *nome_curto) {
-    FILE *f = fopen(caminho_padrao, "rb");
+// Localiza o arquivo em "dados/" ou no diretorio atual (para entrega sem subpastas)
+static const char *resolver_caminho_arquivo(const char *caminho_padrao, const char *nome_curto) {
+    FILE *f = fopen(caminho_padrao, "r");
     if (f != NULL) {
         fclose(f);
         return caminho_padrao;
     }
-
-    f = fopen(nome_curto, "rb");
+    f = fopen(nome_curto, "r");
     if (f != NULL) {
         fclose(f);
         return nome_curto;
     }
-
     return caminho_padrao;
 }
 
+// Compacta, descompacta, mede tempos e confere integridade em modo texto
 static int executar_teste_arquivo(Huffman *huffman,
                                   const char *caminho_entrada,
-                                  int exibir_tabela,
-                                  int exibir_arvore) {
-    const char *arquivo_compactado = "temp_teste.huff";
-    const char *arquivo_restaurado = "temp_restaurado.txt";
+                                  int exibir_detalhes) {
+    const char *arq_huff = "temp_teste.huff";
+    const char *arq_rest = "temp_restaurado.txt";
 
-    printf("\n------------------------------------------------------------\n");
-    printf("Arquivo de teste: %s\n", caminho_entrada);
+    printf("\nArquivo de teste: %s\n", caminho_entrada);
 
-    clock_t inicio_comp = clock();
-    if (!compactar_arquivo(huffman, caminho_entrada, arquivo_compactado)) {
+    clock_t ini_comp = clock();
+    if (!compactar_arquivo(huffman, caminho_entrada, arq_huff)) {
         printf("ERRO: nao foi possivel compactar '%s'.\n", caminho_entrada);
         return 0;
     }
     clock_t fim_comp = clock();
 
-    if (exibir_arvore) {
-        printf("\n=== Estrutura da Arvore de Huffman (Pre-Ordem) ===\n");
+    if (exibir_detalhes) {
+        printf("\nArvore de Huffman (Pre-Ordem):\n");
         imprimir_arvore_do_huffman(huffman);
-    }
-    if (exibir_tabela) {
         imprimir_tabela_codigos(huffman);
     }
     imprimir_resumo_huffman(huffman);
 
-    clock_t inicio_desc = clock();
-    if (!descompactar_arquivo(huffman, arquivo_compactado, arquivo_restaurado)) {
-        printf("ERRO: nao foi possivel descompactar '%s'.\n", arquivo_compactado);
-        remove(arquivo_compactado);
+    clock_t ini_desc = clock();
+    if (!descompactar_arquivo(huffman, arq_huff, arq_rest)) {
+        printf("ERRO: nao foi possivel descompactar '%s'.\n", arq_huff);
+        remove(arq_huff);
         return 0;
     }
     clock_t fim_desc = clock();
 
-    int integro = comparar_arquivos(caminho_entrada, arquivo_restaurado);
-    double tempo_comp_ms = ((double) (fim_comp - inicio_comp) / CLOCKS_PER_SEC) * 1000.0;
-    double tempo_desc_ms = ((double) (fim_desc - inicio_desc) / CLOCKS_PER_SEC) * 1000.0;
+    int integro = comparar_arquivos(caminho_entrada, arq_rest);
+    printf("  Tempo comp. / descomp.     : %.2f ms / %.2f ms\n",
+           ((double) (fim_comp - ini_comp) / CLOCKS_PER_SEC) * 1000.0,
+           ((double) (fim_desc - ini_desc) / CLOCKS_PER_SEC) * 1000.0);
+    printf("  Verificacao de integridade : %s\n", integro ? "OK (identico ao original)" : "FALHA");
 
-    printf("Tempo de compactacao       : %.2f ms\n", tempo_comp_ms);
-    printf("Tempo de descompactacao    : %.2f ms\n", tempo_desc_ms);
-    printf("Verificacao byte a byte    : %s\n",
-           integro ? "OK (arquivo 100% identico ao original)" : "FALHA (divergencia encontrada)");
-
-    remove(arquivo_compactado);
-    remove(arquivo_restaurado);
-
+    remove(arq_huff);
+    remove(arq_rest);
     return integro;
 }
 
+// Executa a bateria comparativa nos 5 arquivos de texto de tamanhos crescentes
 static int executar_bateria_testes(Huffman *huffman) {
-    const char *caminhos_dados[] = {
+    const char *caminhos[] = {
         "dados/texto_pequeno_2kb.txt",
         "dados/texto_medio_15kb.txt",
         "dados/texto_medio_50kb.txt",
         "dados/texto_grande_200kb.txt",
         "dados/texto_grande_500kb.txt"
     };
-    const char *nomes_planos[] = {
+    const char *nomes[] = {
         "texto_pequeno_2kb.txt",
         "texto_medio_15kb.txt",
         "texto_medio_50kb.txt",
         "texto_grande_200kb.txt",
         "texto_grande_500kb.txt"
     };
-    const int total_arquivos = (int) (sizeof(caminhos_dados) / sizeof(caminhos_dados[0]));
+    const int total = (int) (sizeof(caminhos) / sizeof(caminhos[0]));
+    const char *arq_huff = "temp_bateria.huff";
+    const char *arq_rest = "temp_bateria.txt";
 
-    const char *arquivo_compactado = "temp_bateria.huff";
-    const char *arquivo_restaurado = "temp_bateria.txt";
-
-    printf("\n===============================================================================================================================\n");
-    printf("                                BATERIA DE TESTES - COMPRESSAO DE HUFFMAN POR TAMANHO\n");
-    printf("===============================================================================================================================\n");
-    printf("%-26s | %9s | %4s | %4s | %7s | %9s | %8s | %8s | %8s | %8s | %5s\n",
-           "Arquivo", "Original", "Simb", "Nos", "Cabec.", "Compact.", "Entropia", "Bits/S", "Red.Real", "Red.Dado", "Integ");
-    printf("---------------------------+-----------+------+------+---------+-----------+----------+----------+----------+----------+------\n");
+    printf("\nBateria de testes - Compressao de Huffman por tamanho:\n");
+    printf("%-25s | %9s | %4s | %4s | %7s | %9s | %8s | %8s | %8s | %8s | %s\n",
+           "Arquivo", "Original", "Simb", "Nos", "Cabec.", "Compact.",
+           "Entropia", "Bits/S", "Red.Real", "Red.Dado", "Integ");
+    printf("--------------------------+-----------+------+------+---------+-----------+----------+----------+----------+----------+------\n");
 
     int todos_ok = 1;
-    int i;
-    for (i = 0; i < total_arquivos; i++) {
-        const char *caminho = resolver_caminho_arquivo(caminhos_dados[i], nomes_planos[i]);
-
-        if (!compactar_arquivo(huffman, caminho, arquivo_compactado)) {
-            printf("%-26s | ERRO ao abrir ou compactar o arquivo\n", caminho);
+    for (int i = 0; i < total; i++) {
+        const char *caminho = resolver_caminho_arquivo(caminhos[i], nomes[i]);
+        if (!compactar_arquivo(huffman, caminho, arq_huff)) {
+            printf("%-25s | ERRO ao abrir ou compactar\n", caminho);
             todos_ok = 0;
             continue;
         }
 
-        unsigned long orig = obter_tamanho_original(huffman);
-        int simb = obter_simbolos_distintos(huffman);
-        int nos = obter_total_nos_arvore(huffman);
-        unsigned long cab = obter_bytes_cabecalho(huffman);
-        unsigned long comp = obter_tamanho_compactado(huffman);
-        double entropia = obter_entropia_shannon(huffman);
-        double bits_simb = obter_media_bits_por_simbolo(huffman);
-        double red_real = obter_taxa_reducao(huffman);
-        double red_dados = obter_taxa_reducao_dados(huffman);
+        int desc_ok = descompactar_arquivo(huffman, arq_huff, arq_rest);
+        int integro = desc_ok && comparar_arquivos(caminho, arq_rest);
+        if (!integro) todos_ok = 0;
 
-        int desc_ok = descompactar_arquivo(huffman, arquivo_compactado, arquivo_restaurado);
-        int integro = desc_ok && comparar_arquivos(caminho, arquivo_restaurado);
-        if (!integro) {
-            todos_ok = 0;
-        }
-
-        printf("%-26s | %7lu B | %4d | %4d | %5lu B | %7lu B | %8.4f | %8.4f | %7.2f%% | %7.2f%% | %-5s\n",
-               nomes_planos[i], orig, simb, nos, cab, comp, entropia, bits_simb, red_real, red_dados,
+        printf("%-25s | %7lu B | %4d | %4d | %5lu B | %7lu B | %8.4f | %8.4f | %7.2f%% | %7.2f%% | %s\n",
+               nomes[i],
+               obter_tamanho_original(huffman),
+               obter_simbolos_distintos(huffman),
+               obter_total_nos_arvore(huffman),
+               obter_bytes_cabecalho(huffman),
+               obter_tamanho_compactado(huffman),
+               obter_entropia_shannon(huffman),
+               obter_media_bits_por_simbolo(huffman),
+               obter_taxa_reducao(huffman),
+               obter_taxa_reducao_dados(huffman),
                integro ? "OK" : "ERRO");
     }
 
-    printf("===============================================================================================================================\n");
-
-    remove(arquivo_compactado);
-    remove(arquivo_restaurado);
-
+    remove(arq_huff);
+    remove(arq_rest);
     return todos_ok;
 }
 
-/* Testa casos de fronteira: arquivo vazio, simbolo unico, UTF-8 e arquivo inexistente */
+// Grava texto em arquivo temporario, compacta, descompacta e valida integridade
+static int testar_texto_temporario(Huffman *huffman, const char *texto) {
+    FILE *f = fopen("temp_especial_in.txt", "w");
+    if (f == NULL) return 0;
+    fputs(texto, f);
+    fclose(f);
+
+    return compactar_arquivo(huffman, "temp_especial_in.txt", "temp_especial.huff") &&
+           descompactar_arquivo(huffman, "temp_especial.huff", "temp_especial_out.txt") &&
+           comparar_arquivos("temp_especial_in.txt", "temp_especial_out.txt");
+}
+
+// Valida casos de fronteira: vazio, 1 simbolo, UTF-8, inexistente e .huff corrompido
 static int executar_testes_casos_especiais(Huffman *huffman) {
     const char *arq_in = "temp_especial_in.txt";
     const char *arq_huff = "temp_especial.huff";
     const char *arq_out = "temp_especial_out.txt";
     int todos_ok = 1;
 
-    printf("\n=== Testes de Casos de Fronteira ===\n");
+    printf("\nTestes de casos de fronteira:\n");
 
-    /* Caso 1: arquivo vazio */
-    {
-        FILE *f = fopen(arq_in, "wb");
-        if (f != NULL) fclose(f);
+    int ok1 = testar_texto_temporario(huffman, "");
+    printf("  [Caso 1] Arquivo vazio (0 bytes)                  : %s\n", ok1 ? "OK" : "FALHA");
 
-        int ok = compactar_arquivo(huffman, arq_in, arq_huff) &&
-                 descompactar_arquivo(huffman, arq_huff, arq_out) &&
-                 comparar_arquivos(arq_in, arq_out);
-        printf("[Caso 1] Arquivo vazio (0 bytes)                      : %s\n", ok ? "OK" : "FALHA");
-        if (!ok) todos_ok = 0;
+    char repetido[101];
+    memset(repetido, 'A', 100);
+    repetido[100] = '\0';
+    int ok2 = testar_texto_temporario(huffman, repetido);
+    printf("  [Caso 2] Unico simbolo repetido ('A' x 100)       : %s\n", ok2 ? "OK" : "FALHA");
+
+    int ok3 = testar_texto_temporario(
+        huffman,
+        "Estrutura de Dados II - Compressão com Huffman!\n"
+        "Acentuação: ação, coração, árvore, frequência, código.\n");
+    printf("  [Caso 3] Texto curto com acentuacao UTF-8         : %s\n", ok3 ? "OK" : "FALHA");
+
+    int ok4 = !compactar_arquivo(huffman, "arquivo_que_nao_existe.txt", arq_huff);
+    printf("  [Caso 4] Tratamento de arquivo inexistente        : %s\n", ok4 ? "OK" : "FALHA");
+
+    // Caso 5: assinatura invalida e arquivo .huff valido com byte espurio ao final
+    FILE *f = fopen(arq_huff, "wb");
+    if (f != NULL) {
+        fputs("ARQUIVO_INVALIDO_SEM_CABECALHO", f);
+        fclose(f);
     }
-
-    /* Caso 2: arquivo com um unico simbolo repetido */
-    {
-        FILE *f = fopen(arq_in, "wb");
+    int rejeitou_assinatura = !descompactar_arquivo(huffman, arq_huff, arq_out);
+    int rejeitou_extra = 0;
+    if (compactar_arquivo(huffman, arq_in, arq_huff)) {
+        f = fopen(arq_huff, "ab");
         if (f != NULL) {
-            int i;
-            for (i = 0; i < 100; i++) fputc('A', f);
+            fputc(0xFF, f);
             fclose(f);
         }
-
-        int ok = compactar_arquivo(huffman, arq_in, arq_huff) &&
-                 descompactar_arquivo(huffman, arq_huff, arq_out) &&
-                 comparar_arquivos(arq_in, arq_out);
-        printf("[Caso 2] Unico simbolo repetido ('A' x 100)           : %s\n", ok ? "OK" : "FALHA");
-        if (!ok) todos_ok = 0;
+        rejeitou_extra = !descompactar_arquivo(huffman, arq_huff, arq_out);
     }
+    int ok5 = rejeitou_assinatura && rejeitou_extra;
+    printf("  [Caso 5] Rejeicao de .huff invalido/corrompido    : %s\n", ok5 ? "OK" : "FALHA");
 
-    /* Caso 3: texto curto com acentos UTF-8, quebras de linha e pontuacao */
-    {
-        FILE *f = fopen(arq_in, "w");
-        if (f != NULL) {
-            fputs("Estrutura de Dados II - Compressao com Huffman!\n", f);
-            fputs("Acentuacao: acao, coracao, arvore, frequencia, codigo.\n", f);
-            fclose(f);
-        }
-
-        int ok = compactar_arquivo(huffman, arq_in, arq_huff) &&
-                 descompactar_arquivo(huffman, arq_huff, arq_out) &&
-                 comparar_arquivos(arq_in, arq_out);
-        printf("[Caso 3] Texto curto com acentuacao e quebras de linha: %s\n", ok ? "OK" : "FALHA");
-        if (!ok) todos_ok = 0;
-    }
-
-    /* Caso 4: tentativa de abrir arquivo inexistente */
-    {
-        int falhou_corretamente = !compactar_arquivo(huffman, "arquivo_que_nao_existe.txt", arq_huff);
-        printf("[Caso 4] Tratamento de arquivo inexistente            : %s\n",
-               falhou_corretamente ? "OK" : "FALHA");
-        if (!falhou_corretamente) todos_ok = 0;
-    }
-
-    /* Caso 5: rejeicao de arquivo .huff invalido ou corrompido */
-    {
-        FILE *f = fopen(arq_huff, "wb");
-        if (f != NULL) {
-            fputs("ARQUIVO_INVALIDO_SEM_CABECALHO", f);
-            fclose(f);
-        }
-        int rejeitou_assinatura = !descompactar_arquivo(huffman, arq_huff, arq_out);
-
-        /* Gera um .huff valido e anexa um byte espúrio ao final */
-        int rejeitou_bytes_extras = 0;
-        if (compactar_arquivo(huffman, arq_in, arq_huff)) {
-            f = fopen(arq_huff, "ab");
-            if (f != NULL) {
-                fputc(0xFF, f);
-                fclose(f);
-            }
-            rejeitou_bytes_extras = !descompactar_arquivo(huffman, arq_huff, arq_out);
-        }
-
-        int ok = rejeitou_assinatura && rejeitou_bytes_extras;
-        printf("[Caso 5] Rejeicao de .huff invalido ou corrompido     : %s\n",
-               ok ? "OK" : "FALHA");
-        if (!ok) todos_ok = 0;
-    }
+    todos_ok = ok1 && ok2 && ok3 && ok4 && ok5;
 
     remove(arq_in);
     remove(arq_huff);
     remove(arq_out);
-
     return todos_ok;
 }
 
 static void executar_menu_interativo(Huffman *huffman) {
-    char linha[TAM_CAMINHO];
-    char entrada[TAM_CAMINHO];
-    char saida[TAM_CAMINHO];
+    char linha[TAM_CAMINHO], entrada[TAM_CAMINHO], saida[TAM_CAMINHO];
     int opcao = -1;
 
     while (opcao != 0) {
-        printf("\n============================================\n");
-        printf("   COMPRESSAO DE TEXTOS - ALGORITMO HUFFMAN \n");
-        printf("============================================\n");
+        printf("\n=== Compressao de Textos - Algoritmo de Huffman ===\n");
         printf("1. Compactar arquivo de texto\n");
         printf("2. Descompactar arquivo (.huff)\n");
         printf("3. Testar arquivo (compactar + descompactar + verificar)\n");
-        printf("4. Executar bateria de testes (arquivos de teste)\n");
+        printf("4. Executar bateria de testes (5 textos)\n");
         printf("5. Executar testes de casos de fronteira\n");
         printf("6. Exibir tabela de codigos e arvore da ultima operacao\n");
         printf("0. Sair\n");
-        printf("Escolha uma opcao: ");
 
-        if (fgets(linha, sizeof(linha), stdin) == NULL) {
-            break;
-        }
+        if (!ler_linha("Escolha uma opcao: ", linha, sizeof(linha))) break;
         opcao = atoi(linha);
 
         switch (opcao) {
             case 1:
-                printf("Caminho do arquivo de entrada (.txt): ");
-                if (fgets(entrada, sizeof(entrada), stdin) == NULL) break;
-                remover_quebra_linha(entrada);
-
-                printf("Caminho do arquivo compactado (.huff): ");
-                if (fgets(saida, sizeof(saida), stdin) == NULL) break;
-                remover_quebra_linha(saida);
-
+                if (!ler_linha("Entrada (.txt): ", entrada, sizeof(entrada))) break;
+                if (!ler_linha("Saida (.huff) : ", saida, sizeof(saida))) break;
                 if (compactar_arquivo(huffman, entrada, saida)) {
-                    printf("Compactacao concluida com sucesso!\n");
+                    printf("Compactacao concluida!\n");
                     imprimir_resumo_huffman(huffman);
                 } else {
                     printf("ERRO ao compactar o arquivo.\n");
@@ -292,33 +230,19 @@ static void executar_menu_interativo(Huffman *huffman) {
                 break;
 
             case 2:
-                printf("Caminho do arquivo compactado (.huff): ");
-                if (fgets(entrada, sizeof(entrada), stdin) == NULL) break;
-                remover_quebra_linha(entrada);
-
-                printf("Caminho do arquivo restaurado (.txt): ");
-                if (fgets(saida, sizeof(saida), stdin) == NULL) break;
-                remover_quebra_linha(saida);
-
-                if (descompactar_arquivo(huffman, entrada, saida)) {
-                    printf("Descompactacao concluida com sucesso! (%lu bytes restaurados)\n",
+                if (!ler_linha("Entrada (.huff): ", entrada, sizeof(entrada))) break;
+                if (!ler_linha("Saida (.txt)   : ", saida, sizeof(saida))) break;
+                if (descompactar_arquivo(huffman, entrada, saida))
+                    printf("Descompactacao concluida (%lu bytes restaurados).\n",
                            obter_tamanho_original(huffman));
-                } else {
-                    printf("ERRO ao descompactar o arquivo (arquivo invalido ou inexistente).\n");
-                }
+                else
+                    printf("ERRO ao descompactar (arquivo invalido ou inexistente).\n");
                 break;
 
             case 3:
-                printf("Caminho do arquivo de texto para teste: ");
-                if (fgets(entrada, sizeof(entrada), stdin) == NULL) break;
-                remover_quebra_linha(entrada);
-
-                printf("Deseja exibir a tabela de codigos e a arvore? (s/n): ");
-                if (fgets(linha, sizeof(linha), stdin) == NULL) break;
-                {
-                    int exibir = (linha[0] == 's' || linha[0] == 'S');
-                    executar_teste_arquivo(huffman, entrada, exibir, exibir);
-                }
+                if (!ler_linha("Arquivo de texto: ", entrada, sizeof(entrada))) break;
+                if (!ler_linha("Exibir tabela e arvore? (s/n): ", linha, sizeof(linha))) break;
+                executar_teste_arquivo(huffman, entrada, (linha[0] == 's' || linha[0] == 'S'));
                 break;
 
             case 4:
@@ -331,7 +255,7 @@ static void executar_menu_interativo(Huffman *huffman) {
 
             case 6:
                 imprimir_tabela_codigos(huffman);
-                printf("\n=== Estrutura da Arvore de Huffman (Pre-Ordem) ===\n");
+                printf("\nArvore de Huffman (Pre-Ordem):\n");
                 imprimir_arvore_do_huffman(huffman);
                 break;
 
@@ -340,20 +264,20 @@ static void executar_menu_interativo(Huffman *huffman) {
                 break;
 
             default:
-                printf("Opcao invalida. Tente novamente.\n");
+                printf("Opcao invalida.\n");
                 break;
         }
     }
 }
 
-static void exibir_ajuda_uso(const char *nome_programa) {
+static void exibir_ajuda_uso(const char *nome) {
     printf("Uso:\n");
-    printf("  %s                          -> Abre o menu interativo\n", nome_programa);
-    printf("  %s -c <entrada> <saida>     -> Compacta arquivo de texto\n", nome_programa);
-    printf("  %s -d <entrada> <saida>     -> Descompacta arquivo .huff\n", nome_programa);
-    printf("  %s -t <entrada>             -> Compacta, descompacta e valida integridade\n", nome_programa);
-    printf("  %s -b                       -> Executa bateria de testes nos 5 textos\n", nome_programa);
-    printf("  %s -e                       -> Executa testes de casos de fronteira\n", nome_programa);
+    printf("  %s                      -> Menu interativo\n", nome);
+    printf("  %s -c <in> <out>        -> Compactar arquivo de texto\n", nome);
+    printf("  %s -d <in> <out>        -> Descompactar arquivo .huff\n", nome);
+    printf("  %s -t <entrada>         -> Testar compactacao e descompactacao\n", nome);
+    printf("  %s -b                   -> Bateria de testes nos 5 textos\n", nome);
+    printf("  %s -e                   -> Testes de casos de fronteira\n", nome);
 }
 
 int main(int argc, char *argv[]) {
@@ -363,43 +287,37 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    int codigo_saida = 0;
+    int erro = 0;
 
     if (argc == 1) {
         executar_menu_interativo(huffman);
     } else if (strcmp(argv[1], "-c") == 0 && argc == 4) {
         if (compactar_arquivo(huffman, argv[2], argv[3])) {
-            printf("Arquivo '%s' compactado com sucesso em '%s'.\n", argv[2], argv[3]);
+            printf("Arquivo '%s' compactado em '%s'.\n", argv[2], argv[3]);
             imprimir_resumo_huffman(huffman);
         } else {
             printf("ERRO ao compactar '%s'.\n", argv[2]);
-            codigo_saida = 1;
+            erro = 1;
         }
     } else if (strcmp(argv[1], "-d") == 0 && argc == 4) {
-        if (descompactar_arquivo(huffman, argv[2], argv[3])) {
-            printf("Arquivo '%s' descompactado com sucesso em '%s' (%lu bytes).\n",
+        if (descompactar_arquivo(huffman, argv[2], argv[3]))
+            printf("Arquivo '%s' descompactado em '%s' (%lu bytes).\n",
                    argv[2], argv[3], obter_tamanho_original(huffman));
-        } else {
+        else {
             printf("ERRO ao descompactar '%s'.\n", argv[2]);
-            codigo_saida = 1;
+            erro = 1;
         }
     } else if (strcmp(argv[1], "-t") == 0 && argc == 3) {
-        if (!executar_teste_arquivo(huffman, argv[2], 0, 0)) {
-            codigo_saida = 1;
-        }
+        erro = !executar_teste_arquivo(huffman, argv[2], 0);
     } else if (strcmp(argv[1], "-b") == 0 && argc == 2) {
-        if (!executar_bateria_testes(huffman)) {
-            codigo_saida = 1;
-        }
+        erro = !executar_bateria_testes(huffman);
     } else if (strcmp(argv[1], "-e") == 0 && argc == 2) {
-        if (!executar_testes_casos_especiais(huffman)) {
-            codigo_saida = 1;
-        }
+        erro = !executar_testes_casos_especiais(huffman);
     } else {
         exibir_ajuda_uso(argv[0]);
-        codigo_saida = 1;
+        erro = 1;
     }
 
     liberar_huffman(huffman);
-    return codigo_saida;
+    return erro;
 }

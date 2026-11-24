@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include "FilaPrioridade.h"
 
+// Min-heap em vetor: pai = (i-1)/2, esq = 2*i+1, dir = 2*i+2
 struct FilaPrioridade {
     NoHuffman **itens;
     int tamanho;
@@ -13,21 +14,18 @@ static void trocar_nos(NoHuffman **a, NoHuffman **b) {
     *b = temp;
 }
 
-/* Sobe o elemento no indice informado ate restaurar a ordem do min-heap */
+// Sobe o elemento no indice informado ate restaurar o min-heap
 static void subir_heap(FilaPrioridade *fila, int indice) {
     while (indice > 0) {
         int pai = (indice - 1) / 2;
-
-        if (comparar_nos_huffman(fila->itens[indice], fila->itens[pai]) < 0) {
-            trocar_nos(&fila->itens[indice], &fila->itens[pai]);
-            indice = pai;
-        } else {
+        if (comparar_nos_huffman(fila->itens[indice], fila->itens[pai]) >= 0)
             break;
-        }
+        trocar_nos(&fila->itens[indice], &fila->itens[pai]);
+        indice = pai;
     }
 }
 
-/* Desce o elemento trocando-o pelo filho de maior prioridade (menor criterio) */
+// Desce o elemento trocando-o sempre pelo menor filho ate restaurar o min-heap
 static void descer_heap(FilaPrioridade *fila, int indice) {
     while (1) {
         int esq = 2 * indice + 1;
@@ -35,33 +33,25 @@ static void descer_heap(FilaPrioridade *fila, int indice) {
         int menor = indice;
 
         if (esq < fila->tamanho &&
-            comparar_nos_huffman(fila->itens[esq], fila->itens[menor]) < 0) {
+            comparar_nos_huffman(fila->itens[esq], fila->itens[menor]) < 0)
             menor = esq;
-        }
 
         if (dir < fila->tamanho &&
-            comparar_nos_huffman(fila->itens[dir], fila->itens[menor]) < 0) {
+            comparar_nos_huffman(fila->itens[dir], fila->itens[menor]) < 0)
             menor = dir;
-        }
 
-        if (menor != indice) {
-            trocar_nos(&fila->itens[indice], &fila->itens[menor]);
-            indice = menor;
-        } else {
-            break;
-        }
+        if (menor == indice) break;
+
+        trocar_nos(&fila->itens[indice], &fila->itens[menor]);
+        indice = menor;
     }
 }
 
 FilaPrioridade *criar_fila_prioridade(int capacidade) {
-    if (capacidade <= 0) {
-        return NULL;
-    }
+    if (capacidade <= 0) return NULL;
 
     FilaPrioridade *fila = (FilaPrioridade *) malloc(sizeof(FilaPrioridade));
-    if (fila == NULL) {
-        return NULL;
-    }
+    if (fila == NULL) return NULL;
 
     fila->itens = (NoHuffman **) malloc((size_t) capacidade * sizeof(NoHuffman *));
     if (fila->itens == NULL) {
@@ -75,49 +65,35 @@ FilaPrioridade *criar_fila_prioridade(int capacidade) {
 }
 
 void liberar_fila_prioridade(FilaPrioridade *fila) {
-    if (fila == NULL) {
-        return;
-    }
+    if (fila == NULL) return;
 
-    int i;
-    for (i = 0; i < fila->tamanho; i++) {
+    for (int i = 0; i < fila->tamanho; i++)
         liberar_no_huffman(fila->itens[i]);
-    }
 
     free(fila->itens);
     free(fila);
 }
 
 int fila_prioridade_esta_vazia(const FilaPrioridade *fila) {
-    if (fila == NULL || fila->tamanho == 0) {
-        return 1;
-    }
-    return 0;
+    return (fila == NULL || fila->tamanho == 0);
 }
 
 int tamanho_fila_prioridade(const FilaPrioridade *fila) {
-    if (fila == NULL) {
-        return 0;
-    }
-    return fila->tamanho;
+    return (fila != NULL) ? fila->tamanho : 0;
 }
 
 int inserir_fila_prioridade(FilaPrioridade *fila, NoHuffman *no) {
-    if (fila == NULL || no == NULL || fila->tamanho >= fila->capacidade) {
+    if (fila == NULL || no == NULL || fila->tamanho >= fila->capacidade)
         return 0;
-    }
 
     fila->itens[fila->tamanho] = no;
     subir_heap(fila, fila->tamanho);
     fila->tamanho++;
-
     return 1;
 }
 
 NoHuffman *remover_menor_fila_prioridade(FilaPrioridade *fila) {
-    if (fila == NULL || fila->tamanho == 0) {
-        return NULL;
-    }
+    if (fila == NULL || fila->tamanho == 0) return NULL;
 
     NoHuffman *menor = fila->itens[0];
     fila->tamanho--;
